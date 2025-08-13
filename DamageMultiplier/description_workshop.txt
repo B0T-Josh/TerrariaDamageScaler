@@ -1,0 +1,2 @@
+This mod is for automatic damage scaling with a sync of progression of the boss in game.
+This mod supports only Calamity mod.

@@ -1,0 +1,9 @@
+This mod is for automatic damage scaling with a sync of progression of the boss in game.
+This mod supports only Calamity mod.
+
+
+To use this mod, use this keywords:
+
+/weapon list (To list all weapons that have been stored)
+/weapon <weapon name> (To add weapon to the list, that you want to scale)
+/weapon remove <weapon name> (To remove the weapon from the list)
