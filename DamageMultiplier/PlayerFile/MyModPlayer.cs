@@ -27,7 +27,7 @@ namespace DamageMultiplier.PlayerFile
 
         public override void LoadData(Terraria.ModLoader.IO.TagCompound tag)
         {
-            playerWeapons = playerWeapons = tag.GetList<string>("weapons")?.ToList() ?? new List<string>();
+            playerWeapons = tag.GetList<string>("weapons")?.ToList() ?? new List<string>();
         }
     }
 }

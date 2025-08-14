@@ -21,13 +21,10 @@ namespace DamageMultiplier.PlayerFile
 
             var player = Main.player[projectile.owner].GetModPlayer<MyModPlayer>();
 
-            // Track visited projectiles to prevent infinite loops
             var visited = new HashSet<int>();
 
-            // Find and set the linked weapon name
             linkedWeaponName = GetWeaponNameFromSource(source, visited);
 
-            // Apply custom damage if linked to a tracked weapon
             if (!string.IsNullOrEmpty(linkedWeaponName) &&
                 player.playerWeapons.Any(w => DamageMultiplierScale.NormalizeName(w) == linkedWeaponName))
             {

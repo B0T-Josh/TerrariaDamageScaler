@@ -70,14 +70,6 @@ namespace DamageMultiplier.PlayerFile
                 CalamityBosses.Add(calamity.Find<ModNPC>("DevourerofGodsBody").Type);
                 CalamityBosses.Add(calamity.Find<ModNPC>("Yharon").Type);
                 CalamityBosses.Add(calamity.Find<ModNPC>("SupremeCalamitas").Type);
-
-                foreach (int id in CalamityBosses)
-                    bossDefeated[id] = false;
-            }
-            else
-            {
-                foreach (int id in vanillaBosses)
-                    bossDefeated[id] = false;
             }
         }
 
@@ -116,10 +108,17 @@ namespace DamageMultiplier.PlayerFile
         public override void LoadWorldData(TagCompound tag)
         {
             bossDefeated = new Dictionary<int, bool>();
+
+            var bossList = CalamityBosses.Any() ? CalamityBosses : vanillaBosses;
+
+            // Set all bosses to false by default
+            foreach (var id in bossList)
+                bossDefeated[id] = false;
+
             if (tag.ContainsKey("defeatedBosses"))
             {
                 var defeatedList = tag.GetList<int>("defeatedBosses");
-                
+
                 foreach (var bossId in defeatedList)
                 {
                     bossDefeated[bossId] = true;

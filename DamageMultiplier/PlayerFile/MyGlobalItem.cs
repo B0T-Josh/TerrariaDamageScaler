@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Terraria;
@@ -10,83 +11,68 @@ namespace DamageMultiplier.PlayerFile
     {
         private static Mod Calamity = ModLoader.GetMod("CalamityMod");
 
-        // This applies actual damage for gameplay
+        // Apply exact calculated damage per hit
         public override void UpdateInventory(Item item, Player player)
         {
-            var modPlayer = player.GetModPlayer<MyModPlayer>();
-            List<string> input = modPlayer.playerWeapons;
-
-            if (!item.IsAir && input.Any(w => DamageMultiplierScale.NormalizeName(w) == DamageMultiplierScale.NormalizeName(item.Name)))
+            var modPlayer = Main.LocalPlayer.GetModPlayer<MyModPlayer>();
+            bool isCalamityLoaded = ModLoader.HasMod("CalamityMod") && Calamity != null;
+            if (modPlayer.playerWeapons.Contains(DamageMultiplierScale.NormalizeName(player.HeldItem.Name)))
             {
-                bool isCalamityLoaded = ModLoader.HasMod("CalamityMod") && Calamity != null;
-                float summonDamage = 0f;
-                int damage = CalculateDamage(item, isCalamityLoaded);
-
-                summonDamage = damage * 0.01f;
-
-                if (item.DamageType != DamageClass.Summon)
-                    item.damage = damage;
-
-                if (summonDamage > 0)
-                    player.GetDamage(DamageClass.Summon) *= 1f + summonDamage;
-
-                modPlayer.setHeldItem(item);
-                modPlayer.setItemDamage(damage);
+                Item heldItem = player.HeldItem;
+                int damage = CalculateDamage(heldItem, isCalamityLoaded);
+                modPlayer.itemDamage = damage;
+                heldItem.damage = damage;
             }
         }
-
-        // This changes what shows in the tooltip
         public override void ModifyTooltips(Item item, List<TooltipLine> tooltips)
         {
             var player = Main.LocalPlayer;
             var modPlayer = player.GetModPlayer<MyModPlayer>();
 
-            if (!item.IsAir && modPlayer.playerWeapons.Any(w => DamageMultiplierScale.NormalizeName(w) == DamageMultiplierScale.NormalizeName(item.Name)))
+            if (!item.IsAir &&
+                modPlayer.playerWeapons.Any(w => DamageMultiplierScale.NormalizeName(w) ==
+                                                 DamageMultiplierScale.NormalizeName(item.Name)))
             {
                 bool isCalamityLoaded = ModLoader.HasMod("CalamityMod") && Calamity != null;
-                int damage = CalculateDamage(item, isCalamityLoaded);
+                int scaledDamage = CalculateDamage(item, isCalamityLoaded);
 
+                item.damage = scaledDamage;
                 foreach (TooltipLine line in tooltips)
                 {
                     if (line.Mod == "Terraria" && line.Name == "Damage")
                     {
-                        // Preserve the original damage type wording
                         string damageType = item.DamageType.DisplayName.ToString();
-                        line.Text = $"{damage} {damageType} damage";
+                        line.Text = $"{scaledDamage} {damageType} damage";
                         break;
                     }
                 }
             }
         }
 
+        // Calculate scaled damage based on boss HP and attack speed
         private int CalculateDamage(Item item, bool isCalamityLoaded)
         {
-            int damage = 1;
-            int attack_speed = item.useTime;
-
-            if (attack_speed < 20)
-                damage = (int)((DamageMultiplierScale.GetBossScaleHP(NPCID.KingSlime) * 0.002f) * 0.5f);
-            else if(attack_speed > 19 && attack_speed < 25)
-                damage = (int)(DamageMultiplierScale.GetBossScaleHP(NPCID.KingSlime) * 0.002f);
-            else
-                damage = (int)(DamageMultiplierScale.GetBossScaleHP(NPCID.KingSlime) * 0.004f);
+            int attackSpeed = item.useTime;
+            float damage = 1;
 
             var bossList = isCalamityLoaded ? BossDefeated.CalamityBosses : BossDefeated.vanillaBosses;
+            Dictionary<int, bool> bossDefeatedList = BossDefeated.bossDefeated;
 
-            foreach (var boss in bossList)
+            foreach (var boss in bossDefeatedList)
             {
-                if (BossDefeated.bossDefeated.TryGetValue(boss, out bool defeated) && defeated)
+                if (!boss.Value)
                 {
-                    if (attack_speed > 19 && attack_speed < 25)
-                        damage = (int)(DamageMultiplierScale.GetBossScaleHP(boss) * 0.002);
-                    else if (attack_speed < 20)
-                        damage = (int)((DamageMultiplierScale.GetBossScaleHP(boss) * 0.002) * 0.5f);
+                    float bossHP = DamageMultiplierScale.GetBossScaleHP(boss.Key);
+                    if (attackSpeed < 20)
+                        damage = bossHP * 0.002f * 0.5f;
+                    else if (attackSpeed > 19 && attackSpeed < 25)
+                        damage = bossHP * 0.002f;
                     else
-                        damage = (int)(DamageMultiplierScale.GetBossScaleHP(boss) * 0.004f);
+                        damage = bossHP * 0.004f;
                     break;
                 }
             }
-            return damage;
+            return (int)damage;
         }
     }
 }
