@@ -3,6 +3,7 @@ using Terraria.ModLoader;
 using Microsoft.Xna.Framework;
 using System.Linq;
 using Terraria.ID;
+using System.Collections.Generic;
 
 namespace DamageMultiplier.PlayerFile
 {
@@ -61,14 +62,29 @@ namespace DamageMultiplier.PlayerFile
                     caller.Reply("Specify a weapon to remove.", Color.Red);
                     return;
                 }
-                string weaponToRemove = string.Join(" ", args.Skip(1)).Trim();
+                string weaponToRemove = string.Join(" ", args.Skip(1)).Trim().Replace(" ", "").ToLowerInvariant();
                 if (modPlayer.playerWeapons.Remove(weaponToRemove))
+                {
+                    Mod Calamity = ModLoader.GetMod("CalamityMod");
+                    bool isCalamityLoaded = ModLoader.HasMod("CalamityMod") && Calamity != null;
+                    Dictionary<int, Item> allItems = ContentSamples.ItemsByType;
+                    foreach (var weapons in modPlayer.playerWeapons)
+                    {
+                        foreach (var items in allItems)
+                        {
+                            if (DamageMultiplierScale.NormalizeName(items.Value.Name) == weapons)
+                            {
+                                modPlayer.ItemWithDamage.Remove(items.Key);
+                            }
+                        }
+                    }
                     caller.Reply($"Removed weapon: {weaponToRemove}", Color.Green);
+                }
                 else
                     caller.Reply($"Weapon not found: {weaponToRemove}", Color.Yellow);
                 return;
             }
-
+            
             // Add weapon
             string weaponToAdd = string.Join(" ", args).Trim().ToLower().Replace(" ", "");
 
@@ -78,11 +94,28 @@ namespace DamageMultiplier.PlayerFile
                 {
                     modPlayer.playerWeapons.Add(weaponToAdd);
                     caller.Reply($"Weapon added: {weaponToAdd}", Color.Green);
+                    Mod Calamity = ModLoader.GetMod("CalamityMod");
+                    bool isCalamityLoaded = ModLoader.HasMod("CalamityMod") && Calamity != null;
+                    Dictionary<int, Item> allItems = ContentSamples.ItemsByType;
+                    foreach (var weapons in modPlayer.playerWeapons)
+                    {
+                        foreach (var items in allItems)
+                        {
+                            if (DamageMultiplierScale.NormalizeName(items.Value.Name) == weapons)
+                            {
+                                Item weapon = new Item();
+                                weapon.SetDefaults(items.Key);
+                                int damage = MyGlobalItem.CalculateDamage(items.Value, isCalamityLoaded);
+                                modPlayer.ItemWithDamage.Add(items.Key, damage);
+                                weapon.damage = damage;
+                            }
+                        }
+                    }
                 }
                 else
                 {
                     caller.Reply($"Weapon already stored: {weaponToAdd}", Color.Yellow);
-                }   
+                }
             }
             else
             {

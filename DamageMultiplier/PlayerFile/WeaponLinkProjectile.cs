@@ -3,6 +3,7 @@ using Terraria.ModLoader;
 using Terraria.DataStructures;
 using System.Linq;
 using System.Collections.Generic;
+using Terraria.ID;
 
 namespace DamageMultiplier.PlayerFile
 {
@@ -20,16 +21,19 @@ namespace DamageMultiplier.PlayerFile
                 return;
 
             var player = Main.player[projectile.owner].GetModPlayer<MyModPlayer>();
-
+            var mainPlayer = Main.LocalPlayer;
             var visited = new HashSet<int>();
 
             linkedWeaponName = GetWeaponNameFromSource(source, visited);
 
+            Mod Calamity = ModLoader.GetMod("CalamityMod");
+            bool isCalamityLoaded = ModLoader.HasMod("CalamityMod") && Calamity != null;
+
             if (!string.IsNullOrEmpty(linkedWeaponName) &&
                 player.playerWeapons.Any(w => DamageMultiplierScale.NormalizeName(w) == linkedWeaponName))
             {
-                projectile.damage = player.itemDamage;
-                projectile.originalDamage = player.itemDamage;
+                projectile.damage = MyGlobalItem.CalculateDamageByName(linkedWeaponName, isCalamityLoaded);
+                projectile.originalDamage = MyGlobalItem.CalculateDamageByName(linkedWeaponName, isCalamityLoaded);
             }
         }
 
@@ -43,7 +47,6 @@ namespace DamageMultiplier.PlayerFile
             {
                 if (!visited.Add(parentProj.whoAmI))
                 {
-                    // Prevents infinite recursion in cyclic references
                     return null;
                 }
 
@@ -53,7 +56,6 @@ namespace DamageMultiplier.PlayerFile
                     return parentGlobal.linkedWeaponName;
                 }
 
-                // Recurse into parent's source if no linked weapon name found
                 return GetWeaponNameFromSource(parentProj.GetSource_FromThis(), visited);
             }
 
