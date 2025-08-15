@@ -32,8 +32,9 @@ namespace DamageMultiplier.PlayerFile
             if (!string.IsNullOrEmpty(linkedWeaponName) &&
                 player.playerWeapons.Any(w => DamageMultiplierScale.NormalizeName(w) == linkedWeaponName))
             {
-                projectile.damage = MyGlobalItem.CalculateDamageByName(linkedWeaponName, isCalamityLoaded);
-                projectile.originalDamage = MyGlobalItem.CalculateDamageByName(linkedWeaponName, isCalamityLoaded);
+                int projectileDamage = MyGlobalItem.CalculateDamageByName(linkedWeaponName, isCalamityLoaded);
+                projectile.damage = projectileDamage;
+                projectile.originalDamage = projectileDamage;
             }
         }
 
