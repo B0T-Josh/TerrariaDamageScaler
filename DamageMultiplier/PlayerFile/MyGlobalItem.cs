@@ -56,11 +56,11 @@ namespace DamageMultiplier.PlayerFile
             float damage;
 
             if (attackSpeed < 20)
-                damage = DamageMultiplierScale.GetBossScaleHP(NPCID.KingSlime) * 0.002f * 0.5f;
+                damage = DamageMultiplierScale.GetBossScaleHP(NPCID.KingSlime) * 0.004f * 0.5f;
             else if (attackSpeed > 19 && attackSpeed < 25)
-                damage = DamageMultiplierScale.GetBossScaleHP(NPCID.KingSlime) * 0.002f;
-            else
                 damage = DamageMultiplierScale.GetBossScaleHP(NPCID.KingSlime) * 0.003f;
+            else
+                damage = DamageMultiplierScale.GetBossScaleHP(NPCID.KingSlime) * 0.004f;
 
             var bossList = isCalamityLoaded ? BossDefeated.CalamityBosses : BossDefeated.vanillaBosses;
             Dictionary<int, bool> bossDefeatedList = BossDefeated.bossDefeated;
@@ -71,9 +71,9 @@ namespace DamageMultiplier.PlayerFile
                 {
                     float bossHP = DamageMultiplierScale.GetBossScaleHP(boss.Key);
                     if (attackSpeed < 20)
-                        damage = bossHP * 0.002f * 0.5f;
+                        damage = bossHP * 0.004f * 0.5f;
                     else if (attackSpeed > 19 && attackSpeed < 25)
-                        damage = bossHP * 0.002f;
+                        damage = bossHP * 0.004f;
                     else
                         damage = bossHP * 0.003f;
                     break;
@@ -98,11 +98,11 @@ namespace DamageMultiplier.PlayerFile
             float damage;
 
             if (attackSpeed < 20)
-                damage = DamageMultiplierScale.GetBossScaleHP(NPCID.KingSlime) * 0.002f * 0.5f;
+                damage = DamageMultiplierScale.GetBossScaleHP(NPCID.KingSlime) * 0.004f * 0.5f;
             else if (attackSpeed > 19 && attackSpeed < 25)
-                damage = DamageMultiplierScale.GetBossScaleHP(NPCID.KingSlime) * 0.002f;
-            else
                 damage = DamageMultiplierScale.GetBossScaleHP(NPCID.KingSlime) * 0.003f;
+            else
+                damage = DamageMultiplierScale.GetBossScaleHP(NPCID.KingSlime) * 0.004f;
 
             var bossList = isCalamityLoaded ? BossDefeated.CalamityBosses : BossDefeated.vanillaBosses;
             Dictionary<int, bool> bossDefeatedList = BossDefeated.bossDefeated;
@@ -113,9 +113,9 @@ namespace DamageMultiplier.PlayerFile
                 {
                     float bossHP = DamageMultiplierScale.GetBossScaleHP(boss.Key);
                     if (attackSpeed < 20)
-                        damage = bossHP * 0.002f * 0.5f;
+                        damage = bossHP * 0.004f * 0.5f;
                     else if (attackSpeed > 19 && attackSpeed < 25)
-                        damage = bossHP * 0.002f;
+                        damage = bossHP * 0.004f;
                     else
                         damage = bossHP * 0.003f;
                     break;

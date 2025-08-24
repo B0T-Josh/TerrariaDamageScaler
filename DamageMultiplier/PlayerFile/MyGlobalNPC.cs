@@ -30,6 +30,7 @@ namespace DamageMultiplier.PlayerFile
                             weapon.SetDefaults(item.Key);
                             int damage = MyGlobalItem.CalculateDamage(item.Value, isCalamityLoaded);
                             weapon.damage = damage;
+                            modPlayer.ItemWithDamage[item.Key] = damage;
                         }
                     }
                 }
