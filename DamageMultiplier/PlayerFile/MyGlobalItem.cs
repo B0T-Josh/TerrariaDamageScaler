@@ -6,7 +6,7 @@ using Terraria.ID;
 using Terraria.ModLoader;
 
 namespace DamageMultiplier.PlayerFile
-{
+{   
     public class MyGlobalItem : GlobalItem
     {
         private static Mod Calamity = ModLoader.GetMod("CalamityMod");
@@ -103,14 +103,12 @@ namespace DamageMultiplier.PlayerFile
         public static int CalculateDamageByName(Player player, string item, bool isCalamityLoaded)
         {
             Item weapon = new Item();
-            Dictionary<int, Item> allItems = ContentSamples.ItemsByType;
-            var modPayer = Main.LocalPlayer.GetModPlayer<MyModPlayer>();
-            foreach (var items in allItems)
+            var modPlayer = Main.LocalPlayer.GetModPlayer<MyModPlayer>();
+            Dictionary<string, int> weaponName = modPlayer.weaponName;
+
+            if (weaponName.TryGetValue(item, out int id))
             {
-                if (DamageMultiplierScale.NormalizeName(items.Value.Name) == item)
-                {
-                    weapon.SetDefaults(items.Key);
-                }
+                weapon.SetDefaults(id);
             }
 
             int attackSpeed = weapon.useTime;

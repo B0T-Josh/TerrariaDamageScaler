@@ -51,15 +51,10 @@ namespace DamageMultiplier.PlayerFile
                 CalamityBosses.Add(NPCID.TheDestroyer);
                 CalamityBosses.Add(calamity.Find<ModNPC>("CalamitasClone").Type);
                 CalamityBosses.Add(NPCID.Plantera);
-                CalamityBosses.Add(calamity.Find<ModNPC>("AstrumAureus").Type);
-                CalamityBosses.Add(NPCID.Golem);
-                CalamityBosses.Add(NPCID.DukeFishron);
                 CalamityBosses.Add(calamity.Find<ModNPC>("PlaguebringerGoliath").Type);
-                CalamityBosses.Add(NPCID.HallowBoss);
-                CalamityBosses.Add(calamity.Find<ModNPC>("RavagerBody").Type);
-                CalamityBosses.Add(NPCID.CultistBoss);
+                CalamityBosses.Add(NPCID.DukeFishron);
+                CalamityBosses.Add(calamity.Find<ModNPC>("AstrumAureus").Type);
                 CalamityBosses.Add(calamity.Find<ModNPC>("AstrumDeusHead").Type);
-                CalamityBosses.Add(NPCID.MoonLordCore);
                 CalamityBosses.Add(calamity.Find<ModNPC>("ProfanedGuardianCommander").Type);
                 CalamityBosses.Add(calamity.Find<ModNPC>("Providence").Type);
                 CalamityBosses.Add(calamity.Find<ModNPC>("CeaselessVoid").Type);
@@ -90,9 +85,7 @@ namespace DamageMultiplier.PlayerFile
                 NPCID.SkeletronPrime,
                 NPCID.TheDestroyer,
                 NPCID.Plantera,
-                NPCID.Golem,
                 NPCID.DukeFishron,
-                NPCID.HallowBoss,
                 NPCID.CultistBoss,
                 NPCID.MoonLordCore,
             };

@@ -10,6 +10,8 @@ namespace DamageMultiplier.PlayerFile
     {
         public Dictionary<int, int> ItemWithDamage = new Dictionary<int, int>();
         public List<string> playerWeapons = new List<string>();
+        public Dictionary<int, Item> allItems;
+        public Dictionary<string, int> weaponName = new Dictionary<string, int>();
         public override void SaveData(Terraria.ModLoader.IO.TagCompound tag)
         {
             tag["weapons"] = playerWeapons;
@@ -25,7 +27,7 @@ namespace DamageMultiplier.PlayerFile
             var player = Main.LocalPlayer;
             Mod Calamity = ModLoader.GetMod("CalamityMod");
             bool isCalamityLoaded = ModLoader.HasMod("CalamityMod") && Calamity != null;
-            Dictionary<int, Item> allItems = ContentSamples.ItemsByType;
+            allItems = ContentSamples.ItemsByType; 
             if (playerWeapons.Count > 0)
             {
                 foreach (var weapons in playerWeapons)
@@ -36,6 +38,7 @@ namespace DamageMultiplier.PlayerFile
                         {
                             int damage = MyGlobalItem.CalculateDamage(player, items.Value, isCalamityLoaded);
                             ItemWithDamage.Add(items.Key, damage);
+                            weaponName.Add(DamageMultiplierScale.NormalizeName(items.Value.Name), items.Key);
                         }
                     }
                 }
