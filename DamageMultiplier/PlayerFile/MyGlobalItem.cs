@@ -34,7 +34,7 @@ namespace DamageMultiplier.PlayerFile
                                                  DamageMultiplierScale.NormalizeName(item.Name)))
             {
                 bool isCalamityLoaded = ModLoader.HasMod("CalamityMod") && Calamity != null;
-                int scaledDamage = CalculateDamage(item, isCalamityLoaded);
+                int scaledDamage = CalculateDamage(player, item, isCalamityLoaded);
 
                 item.damage = scaledDamage;
                 foreach (TooltipLine line in tooltips)
@@ -50,17 +50,18 @@ namespace DamageMultiplier.PlayerFile
         }
 
         // Calculate scaled damage based on boss HP and attack speed
-        public static int CalculateDamage(Item item, bool isCalamityLoaded)
+        public static int CalculateDamage(Player player, Item item, bool isCalamityLoaded)
         {
             int attackSpeed = item.useTime;
             float damage;
 
+            // Default scaling (before modifiers)
             if (attackSpeed < 20)
-                damage = DamageMultiplierScale.GetBossScaleHP(NPCID.KingSlime) * 0.004f * 0.5f;
+                damage = DamageMultiplierScale.GetBossScaleHP(NPCID.KingSlime) * 0.001f * 0.5f;
             else if (attackSpeed > 19 && attackSpeed < 25)
-                damage = DamageMultiplierScale.GetBossScaleHP(NPCID.KingSlime) * 0.003f;
+                damage = DamageMultiplierScale.GetBossScaleHP(NPCID.KingSlime) * 0.001f;
             else
-                damage = DamageMultiplierScale.GetBossScaleHP(NPCID.KingSlime) * 0.004f;
+                damage = DamageMultiplierScale.GetBossScaleHP(NPCID.KingSlime) * 0.002f;
 
             var bossList = isCalamityLoaded ? BossDefeated.CalamityBosses : BossDefeated.vanillaBosses;
             Dictionary<int, bool> bossDefeatedList = BossDefeated.bossDefeated;
@@ -71,18 +72,35 @@ namespace DamageMultiplier.PlayerFile
                 {
                     float bossHP = DamageMultiplierScale.GetBossScaleHP(boss.Key);
                     if (attackSpeed < 20)
-                        damage = bossHP * 0.004f * 0.5f;
+                        damage = bossHP * 0.001f * 0.5f;
                     else if (attackSpeed > 19 && attackSpeed < 25)
-                        damage = bossHP * 0.004f;
+                        damage = bossHP * 0.001f;
                     else
-                        damage = bossHP * 0.003f;
-                    break;
+                        damage = bossHP * 0.002f;
+
+                    // Apply player StatModifier here
+                    StatModifier modifier = player.GetTotalDamage(item.DamageType);
+                    return (int)Math.Round(modifier.ApplyTo(damage));
                 }
             }
-            return (int)damage;
+
+            // If all bosses are defeated, scale off the last boss
+            var size = bossList.Count - 1;
+            float finalBossHp = DamageMultiplierScale.GetBossScaleHP(bossList[size]);
+            if (attackSpeed < 20)
+                damage = finalBossHp * 0.01f * 0.5f;
+            else if (attackSpeed > 19 && attackSpeed < 25)
+                damage = finalBossHp * 0.01f;
+            else
+                damage = finalBossHp * 0.02f;
+
+            // Apply player StatModifier here
+            StatModifier endModifier = player.GetTotalDamage(item.DamageType);
+            return (int)Math.Round(endModifier.ApplyTo(damage));
         }
 
-        public static int CalculateDamageByName(string item, bool isCalamityLoaded)
+
+        public static int CalculateDamageByName(Player player, string item, bool isCalamityLoaded)
         {
             Item weapon = new Item();
             Dictionary<int, Item> allItems = ContentSamples.ItemsByType;
@@ -94,15 +112,16 @@ namespace DamageMultiplier.PlayerFile
                     weapon.SetDefaults(items.Key);
                 }
             }
+
             int attackSpeed = weapon.useTime;
             float damage;
 
             if (attackSpeed < 20)
-                damage = DamageMultiplierScale.GetBossScaleHP(NPCID.KingSlime) * 0.004f * 0.5f;
+                damage = DamageMultiplierScale.GetBossScaleHP(NPCID.KingSlime) * 0.001f * 0.5f;
             else if (attackSpeed > 19 && attackSpeed < 25)
-                damage = DamageMultiplierScale.GetBossScaleHP(NPCID.KingSlime) * 0.003f;
+                damage = DamageMultiplierScale.GetBossScaleHP(NPCID.KingSlime) * 0.001f;
             else
-                damage = DamageMultiplierScale.GetBossScaleHP(NPCID.KingSlime) * 0.004f;
+                damage = DamageMultiplierScale.GetBossScaleHP(NPCID.KingSlime) * 0.002f;
 
             var bossList = isCalamityLoaded ? BossDefeated.CalamityBosses : BossDefeated.vanillaBosses;
             Dictionary<int, bool> bossDefeatedList = BossDefeated.bossDefeated;
@@ -113,15 +132,31 @@ namespace DamageMultiplier.PlayerFile
                 {
                     float bossHP = DamageMultiplierScale.GetBossScaleHP(boss.Key);
                     if (attackSpeed < 20)
-                        damage = bossHP * 0.004f * 0.5f;
+                        damage = bossHP * 0.001f * 0.5f;
                     else if (attackSpeed > 19 && attackSpeed < 25)
-                        damage = bossHP * 0.004f;
+                        damage = bossHP * 0.001f;
                     else
-                        damage = bossHP * 0.003f;
-                    break;
+                        damage = bossHP * 0.002f;
+
+                    // Apply player StatModifier here
+                    StatModifier modifier = player.GetTotalDamage(weapon.DamageType);
+                    return (int)Math.Round(modifier.ApplyTo(damage));
                 }
             }
-            return (int)damage;
+
+            // If all bosses are defeated, scale off the last boss
+            var size = bossList.Count - 1;
+            float finalBossHp = DamageMultiplierScale.GetBossScaleHP(bossList[size]);
+            if (attackSpeed < 20)
+                damage = finalBossHp * 0.01f * 0.5f;
+            else if (attackSpeed > 19 && attackSpeed < 25)
+                damage = finalBossHp * 0.01f;
+            else
+                damage = finalBossHp * 0.02f;
+
+            // Apply player StatModifier here
+            StatModifier endModifier = player.GetTotalDamage(weapon.DamageType);
+            return (int)Math.Round(endModifier.ApplyTo(damage));
         }
     }
 }

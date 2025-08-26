@@ -44,11 +44,11 @@ namespace DamageMultiplier.PlayerFile
                 CalamityBosses.Add(NPCID.SkeletronHead);
                 CalamityBosses.Add(NPCID.WallofFlesh);
                 CalamityBosses.Add(NPCID.QueenSlimeBoss);
-                CalamityBosses.Add(calamity.Find<ModNPC>("Cryogen").Type);
                 CalamityBosses.Add(NPCID.Spazmatism);
+                CalamityBosses.Add(NPCID.SkeletronPrime);
+                CalamityBosses.Add(calamity.Find<ModNPC>("Cryogen").Type);
                 CalamityBosses.Add(calamity.Find<ModNPC>("AquaticScourgeHead").Type);
                 CalamityBosses.Add(NPCID.TheDestroyer);
-                CalamityBosses.Add(NPCID.SkeletronPrime);
                 CalamityBosses.Add(calamity.Find<ModNPC>("CalamitasClone").Type);
                 CalamityBosses.Add(NPCID.Plantera);
                 CalamityBosses.Add(calamity.Find<ModNPC>("AstrumAureus").Type);

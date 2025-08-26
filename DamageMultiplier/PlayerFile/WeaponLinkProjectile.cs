@@ -21,9 +21,8 @@ namespace DamageMultiplier.PlayerFile
                 return;
 
             var player = Main.player[projectile.owner].GetModPlayer<MyModPlayer>();
-            var mainPlayer = Main.LocalPlayer;
             var visited = new HashSet<int>();
-
+            var mainPlayer = Main.player[projectile.owner];
             linkedWeaponName = GetWeaponNameFromSource(source, visited);
 
             Mod Calamity = ModLoader.GetMod("CalamityMod");
@@ -32,7 +31,7 @@ namespace DamageMultiplier.PlayerFile
             if (!string.IsNullOrEmpty(linkedWeaponName) &&
                 player.playerWeapons.Any(w => DamageMultiplierScale.NormalizeName(w) == linkedWeaponName))
             {
-                int projectileDamage = MyGlobalItem.CalculateDamageByName(linkedWeaponName, isCalamityLoaded);
+                int projectileDamage = MyGlobalItem.CalculateDamageByName(mainPlayer, linkedWeaponName, isCalamityLoaded);
                 projectile.damage = projectileDamage;
                 projectile.originalDamage = projectileDamage;
             }

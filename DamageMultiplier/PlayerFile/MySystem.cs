@@ -92,6 +92,7 @@ namespace DamageMultiplier.PlayerFile
             {
                 if (!modPlayer.playerWeapons.Contains(weaponToAdd))
                 {
+                    var player = Main.LocalPlayer;
                     modPlayer.playerWeapons.Add(weaponToAdd);
                     caller.Reply($"Weapon added: {weaponToAdd}", Color.Green);
                     Mod Calamity = ModLoader.GetMod("CalamityMod");
@@ -105,7 +106,7 @@ namespace DamageMultiplier.PlayerFile
                             {
                                 Item weapon = new Item();
                                 weapon.SetDefaults(items.Key);
-                                int damage = MyGlobalItem.CalculateDamage(items.Value, isCalamityLoaded);
+                                int damage = MyGlobalItem.CalculateDamage(player, items.Value, isCalamityLoaded);
                                 modPlayer.ItemWithDamage.Add(items.Key, damage);
                                 weapon.damage = damage;
                             }

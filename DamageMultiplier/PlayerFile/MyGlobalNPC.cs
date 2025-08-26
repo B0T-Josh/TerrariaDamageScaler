@@ -12,7 +12,7 @@ namespace DamageMultiplier.PlayerFile
         private static Mod Calamity = ModLoader.GetMod("CalamityMod");
         public override void OnKill(NPC npc)
         {
-            if (npc.boss)
+            if(npc.boss)
             {
                 BossDefeated.bossDefeated[npc.type] = true;
                 Main.NewText($"Boss defeated: {Lang.GetNPCNameValue(npc.type)}");
@@ -28,7 +28,7 @@ namespace DamageMultiplier.PlayerFile
                         {
                             Item weapon = new Item();
                             weapon.SetDefaults(item.Key);
-                            int damage = MyGlobalItem.CalculateDamage(item.Value, isCalamityLoaded);
+                            int damage = MyGlobalItem.CalculateDamage(player, item.Value, isCalamityLoaded);
                             weapon.damage = damage;
                             modPlayer.ItemWithDamage[item.Key] = damage;
                         }

@@ -22,6 +22,7 @@ namespace DamageMultiplier.PlayerFile
 
         public override void OnEnterWorld()
         {
+            var player = Main.LocalPlayer;
             Mod Calamity = ModLoader.GetMod("CalamityMod");
             bool isCalamityLoaded = ModLoader.HasMod("CalamityMod") && Calamity != null;
             Dictionary<int, Item> allItems = ContentSamples.ItemsByType;
@@ -33,7 +34,7 @@ namespace DamageMultiplier.PlayerFile
                     {
                         if (DamageMultiplierScale.NormalizeName(items.Value.Name) == weapons)
                         {
-                            int damage = MyGlobalItem.CalculateDamage(items.Value, isCalamityLoaded);
+                            int damage = MyGlobalItem.CalculateDamage(player, items.Value, isCalamityLoaded);
                             ItemWithDamage.Add(items.Key, damage);
                         }
                     }
