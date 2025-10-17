@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
 using Terraria;
 using Terraria.ID;
 using Terraria.ModLoader;
@@ -9,114 +10,100 @@ namespace DamageMultiplier.PlayerFile
 {
     public class BossDefeated : ModSystem
     {
-        // Dictionary to track boss kills (replace int with NPC ID)
-        public static Dictionary<int, bool> bossDefeated = new Dictionary<int, bool>();
-        public static List<int> vanillaBosses = new List<int>()
-        {
-            NPCID.KingSlime,
-            NPCID.EyeofCthulhu,
-            NPCID.SkeletronHead,
-            NPCID.WallofFlesh,
-            NPCID.QueenSlimeBoss,
-            NPCID.Spazmatism,
-            NPCID.SkeletronPrime,
-            NPCID.TheDestroyer,
-            NPCID.Plantera,
-            NPCID.Golem,
-            NPCID.DukeFishron,
-            NPCID.HallowBoss,
-            NPCID.CultistBoss,
-            NPCID.MoonLordCore,
-        };
-
-        public static List<int> CalamityBosses = new List<int>();
+        public static Dictionary<int, bool> bossDefeated = new();
 
         public override void OnWorldLoad()
         {
-            bossDefeated = new Dictionary<int, bool>();
-            CalamityBosses.Clear();
-
-            // If Calamity is installed, populate CalamityBosses now
-            if (ModLoader.TryGetMod("CalamityMod", out Mod calamity))
-            {
-                CalamityBosses.Add(NPCID.KingSlime);
-                CalamityBosses.Add(NPCID.EyeofCthulhu);
-                CalamityBosses.Add(NPCID.SkeletronHead);
-                CalamityBosses.Add(NPCID.WallofFlesh);
-                CalamityBosses.Add(NPCID.QueenSlimeBoss);
-                CalamityBosses.Add(NPCID.Spazmatism);
-                CalamityBosses.Add(NPCID.SkeletronPrime);
-                CalamityBosses.Add(calamity.Find<ModNPC>("Cryogen").Type);
-                CalamityBosses.Add(calamity.Find<ModNPC>("AquaticScourgeHead").Type);
-                CalamityBosses.Add(NPCID.TheDestroyer);
-                CalamityBosses.Add(calamity.Find<ModNPC>("CalamitasClone").Type);
-                CalamityBosses.Add(NPCID.Plantera);
-                CalamityBosses.Add(calamity.Find<ModNPC>("PlaguebringerGoliath").Type);
-                CalamityBosses.Add(NPCID.DukeFishron);
-                CalamityBosses.Add(calamity.Find<ModNPC>("AstrumAureus").Type);
-                CalamityBosses.Add(calamity.Find<ModNPC>("AstrumDeusHead").Type);
-                CalamityBosses.Add(calamity.Find<ModNPC>("ProfanedGuardianCommander").Type);
-                CalamityBosses.Add(calamity.Find<ModNPC>("Providence").Type);
-                CalamityBosses.Add(calamity.Find<ModNPC>("CeaselessVoid").Type);
-                CalamityBosses.Add(calamity.Find<ModNPC>("StormWeaverBody").Type);
-                CalamityBosses.Add(calamity.Find<ModNPC>("Signus").Type);
-                CalamityBosses.Add(calamity.Find<ModNPC>("Polterghast").Type);
-                CalamityBosses.Add(calamity.Find<ModNPC>("OldDuke").Type);
-                CalamityBosses.Add(calamity.Find<ModNPC>("DevourerofGodsBody").Type);
-                CalamityBosses.Add(calamity.Find<ModNPC>("Yharon").Type);
-                CalamityBosses.Add(calamity.Find<ModNPC>("SupremeCalamitas").Type);
-            }
-        }
-
-        public override void OnWorldUnload()
-        {
-            // Clear static data when leaving a world
-            bossDefeated.Clear();
-            CalamityBosses.Clear();
-            vanillaBosses = new List<int>()
-            {
-                NPCID.KingSlime,
-                NPCID.EyeofCthulhu,
-                NPCID.BrainofCthulhu,
-                NPCID.SkeletronHead,
-                NPCID.WallofFlesh,
-                NPCID.QueenSlimeBoss,
-                NPCID.Spazmatism,
-                NPCID.SkeletronPrime,
-                NPCID.TheDestroyer,
-                NPCID.Plantera,
-                NPCID.DukeFishron,
-                NPCID.CultistBoss,
-                NPCID.MoonLordCore,
-            };
-        }
-
-
-        public override void SaveWorldData(TagCompound tag)
-        {
-            // Save defeated bosses as a list
-            tag["defeatedBosses"] = bossDefeated.Where(b => b.Value).Select(b => b.Key).ToList();
+            LoadBossProgress();
         }
 
         public override void LoadWorldData(TagCompound tag)
         {
-            bossDefeated = new Dictionary<int, bool>();
+            LoadBossProgress();
+        }
 
-            var bossList = CalamityBosses.Any() ? CalamityBosses : vanillaBosses;
+        public override void SaveWorldData(TagCompound tag)
+        {
+            // Required override, even if empty
+        }
 
-            // Set all bosses to false by default
-            foreach (var id in bossList)
-                bossDefeated[id] = false;
-
-            if (tag.ContainsKey("defeatedBosses"))
+        public override void NetSend(BinaryWriter writer)
+        {
+            // Sync boss progress to clients
+            writer.Write(bossDefeated.Count);
+            foreach (var pair in bossDefeated)
             {
-                var defeatedList = tag.GetList<int>("defeatedBosses");
-
-                foreach (var bossId in defeatedList)
-                {
-                    bossDefeated[bossId] = true;
-                }
+                writer.Write(pair.Key);
+                writer.Write(pair.Value);
             }
         }
+
+        public override void NetReceive(BinaryReader reader)
+        {
+            bossDefeated.Clear();
+            int count = reader.ReadInt32();
+            for (int i = 0; i < count; i++)
+            {
+                int key = reader.ReadInt32();
+                bool value = reader.ReadBoolean();
+                bossDefeated[key] = value;
+            }
+        }
+
+        private void LoadBossProgress()
+        {
+            bossDefeated.Clear();
+
+            // ✅ Vanilla bosses
+            bossDefeated[NPCID.KingSlime] = NPC.downedSlimeKing;
+            bossDefeated[NPCID.EyeofCthulhu] = NPC.downedBoss1;
+            bossDefeated[NPCID.BrainofCthulhu] = NPC.downedBoss2;
+            bossDefeated[NPCID.SkeletronHead] = NPC.downedBoss3;
+            bossDefeated[NPCID.WallofFlesh] = Main.hardMode;
+            bossDefeated[NPCID.QueenSlimeBoss] = NPC.downedQueenSlime;
+            bossDefeated[NPCID.TheDestroyer] = NPC.downedMechBoss1;
+            bossDefeated[NPCID.Spazmatism] = NPC.downedMechBoss2;
+            bossDefeated[NPCID.SkeletronPrime] = NPC.downedMechBoss3;
+            bossDefeated[NPCID.Plantera] = NPC.downedPlantBoss;
+            bossDefeated[NPCID.Golem] = NPC.downedGolemBoss;
+            bossDefeated[NPCID.DukeFishron] = NPC.downedFishron;
+            bossDefeated[NPCID.EmpressButterfly] = NPC.downedEmpressOfLight;
+            bossDefeated[NPCID.CultistBoss] = NPC.downedAncientCultist;
+            bossDefeated[NPCID.MoonLordCore] = NPC.downedMoonlord;
+
+            // ✅ Add Calamity bosses if loaded
+            TryLoadCalamityBossProgress();
+        }
+
+        private void TryLoadCalamityBossProgress()
+        {
+            if (!ModLoader.TryGetMod("CalamityMod", out Mod calamity))
+                return;
+
+            var downedBossType = calamity.Code.GetType("CalamityMod.World.DownedBossSystem");
+            if (downedBossType == null)
+                return;
+
+            var fields = downedBossType.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+                                       .Where(f => f.FieldType == typeof(bool));
+
+            foreach (var field in fields)
+            {
+                try
+                {
+                    bool defeated = (bool)(field.GetValue(null) ?? false);
+                    string cleanName = field.Name.Replace("Downed", "");
+
+                    var modNPC = calamity.Find<ModNPC>(cleanName);
+                    if (modNPC != null)
+                    {
+                        bossDefeated[modNPC.Type] = defeated;
+                    }
+                }
+                catch { }
+            }
+        }
+
+        public Dictionary<int, bool> GetAllBossProgress() => bossDefeated;
     }
 }
