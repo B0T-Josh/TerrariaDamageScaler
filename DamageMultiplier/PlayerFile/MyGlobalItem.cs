@@ -85,23 +85,23 @@ namespace DamageMultiplier.PlayerFile
             float finalBossHp = DamageMultiplierScale.GetBossScaleHP(bossDefeatedList.Last().Key);
             if (attackSpeed < 20 && attackSpeed > 10)
             {
-                damage = bossHP * 0.1f * 0.5f;
+                damage = finalBossHp * 0.1f * 0.5f;
             }
             else if (attackSpeed <= 10)
             {
-                damage = bossHP * 0.05f * 0.5f;
+                damage = finalBossHp * 0.05f * 0.5f;
             }
             else if (attackSpeed > 19 && attackSpeed < 25)
             {
-                damage = bossHP * 0.1f;
+                damage = finalBossHp * 0.1f;
             }
             else if (attackSpeed >= 25 && attackSpeed < 30)
             {
-                damage = bossHP * 0.2f;
+                damage = finalBossHp * 0.2f;
             }
             else if (attackSpeed >= 30)
             {
-                damage = bossHP * 0.5f;
+                damage = finalBossHp * 0.5f;
             }
             else
             {
@@ -172,23 +172,23 @@ namespace DamageMultiplier.PlayerFile
             float finalBossHp = DamageMultiplierScale.GetBossScaleHP(bossDefeatedList.Last().Key);
             if (attackSpeed < 20 && attackSpeed > 10)
             {
-                damage = bossHP * 0.1f * 0.5f;
+                damage = finalBossHp * 0.1f * 0.5f;
             }
             else if (attackSpeed <= 10)
             {
-                damage = bossHP * 0.05f * 0.5f;
+                damage = finalBossHp * 0.05f * 0.5f;
             }
             else if (attackSpeed > 19 && attackSpeed < 25)
             {
-                damage = bossHP * 0.1f;
+                damage = finalBossHp * 0.1f;
             }
             else if (attackSpeed >= 25 && attackSpeed < 30)
             {
-                damage = bossHP * 0.2f;
+                damage = finalBossHp * 0.2f;
             }
             else if (attackSpeed >= 30)
             {
-                damage = bossHP * 0.5f;
+                damage = finalBossHp * 0.5f;
             }
             else
             {
