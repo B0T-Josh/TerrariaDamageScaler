@@ -51,19 +51,19 @@ namespace DamageMultiplier.PlayerFile
                     float bossHP = DamageMultiplierScale.GetBossScaleHP(boss.Key);
                     if (attackSpeed < 20 && attackSpeed > 10)
                     {
-                        damage = bossHP * 0.01f * 0.5f;
+                        damage = bossHP * 0.001f * 0.5f;
                     }
                     else if (attackSpeed <= 10)
                     {
-                        damage = bossHP * 0.005f * 0.5f;
+                        damage = bossHP * 0.0005f * 0.5f;
                     }
                     else if (attackSpeed > 19 && attackSpeed < 25)
                     {
-                        damage = bossHP * 0.01f;
+                        damage = bossHP * 0.001f;
                     }
                     else if (attackSpeed >= 25)
                     {
-                        damage = bossHP * 0.02f;
+                        damage = bossHP * 0.002f;
                     }
                     else
                     {
@@ -122,19 +122,19 @@ namespace DamageMultiplier.PlayerFile
                     float bossHP = DamageMultiplierScale.GetBossScaleHP(boss.Key);
                     if (attackSpeed < 20 && attackSpeed > 10)
                     {
-                        damage = bossHP * 0.01f * 0.5f;
+                        damage = bossHP * 0.001f * 0.5f;
                     }
                     else if (attackSpeed <= 10)
                     {
-                        damage = bossHP * 0.005f * 0.5f;
+                        damage = bossHP * 0.0005f * 0.5f;
                     }
                     else if (attackSpeed > 19 && attackSpeed < 25)
                     {
-                        damage = bossHP * 0.01f;
+                        damage = bossHP * 0.001f;
                     }
                     else if (attackSpeed >= 25)
                     {
-                        damage = bossHP * 0.02f;
+                        damage = bossHP * 0.002f;
                     }
                     else
                     {
