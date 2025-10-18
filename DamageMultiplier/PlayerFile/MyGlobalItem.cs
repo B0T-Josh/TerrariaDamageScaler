@@ -67,7 +67,7 @@ namespace DamageMultiplier.PlayerFile
                     }
                     else if (attackSpeed >= 25)
                     {
-                        damage = bossHP * 0.005f;
+                        damage = bossHP * 0.01f;
                     }
                     else
                     {
@@ -154,7 +154,7 @@ namespace DamageMultiplier.PlayerFile
                     }
                     else if (attackSpeed >= 25)
                     {
-                        damage = bossHP * 0.005f;
+                        damage = bossHP * 0.01f;
                     }
                     else
                     {
