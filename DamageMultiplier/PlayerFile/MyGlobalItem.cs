@@ -51,15 +51,15 @@ namespace DamageMultiplier.PlayerFile
                     float bossHP = DamageMultiplierScale.GetBossScaleHP(boss.Key);
                     if (attackSpeed <= 15)
                     {
-                        damage = bossHP * 0.001f * 0.5f;
+                        damage = bossHP * 0.002f * 0.5f;
                     }
                     else if (attackSpeed > 15 && attackSpeed < 20)
                     {
-                        damage = bossHP * 0.001f;
+                        damage = bossHP * 0.002f;
                     }
                     else if (attackSpeed >= 20 && attackSpeed < 25)
                     {
-                        damage = bossHP * 0.002f;
+                        damage = bossHP * 0.003f;
                     }
                     else if (attackSpeed >= 25)
                     {
@@ -69,7 +69,6 @@ namespace DamageMultiplier.PlayerFile
                     {
                         damage = 1;
                     }
-
                     // Apply player StatModifier here
                     StatModifier modifier = player.GetTotalDamage(item.DamageType);
                     return (int)Math.Round(modifier.ApplyTo(damage));
@@ -81,15 +80,15 @@ namespace DamageMultiplier.PlayerFile
             float finalBossHp = DamageMultiplierScale.GetBossScaleHP(bossDefeatedList.Last().Key);
             if (attackSpeed <= 15)
             {
-                damage = finalBossHp * 0.1f * 0.5f;
+                damage = finalBossHp * 0.2f * 0.5f;
             }
             else if (attackSpeed > 15 && attackSpeed < 20)
             {
-                damage = finalBossHp * 0.1f;
+                damage = finalBossHp * 0.2f;
             }
             else if (attackSpeed >= 20 && attackSpeed < 25)
             {
-                damage = finalBossHp * 0.2f;
+                damage = finalBossHp * 0.3f;
             }
             else if (attackSpeed >= 25)
             {
@@ -130,15 +129,15 @@ namespace DamageMultiplier.PlayerFile
                     float bossHP = DamageMultiplierScale.GetBossScaleHP(boss.Key);
                     if (attackSpeed <= 15)
                     {
-                        damage = bossHP * 0.001f * 0.5f;
+                        damage = bossHP * 0.002f * 0.5f;
                     }
                     else if (attackSpeed > 15 && attackSpeed < 20)
                     {
-                        damage = bossHP * 0.001f;
+                        damage = bossHP * 0.002f;
                     }
                     else if (attackSpeed >= 20 && attackSpeed < 25)
                     {
-                        damage = bossHP * 0.002f;
+                        damage = bossHP * 0.003f;
                     }
                     else if (attackSpeed >= 25)
                     {
@@ -148,7 +147,6 @@ namespace DamageMultiplier.PlayerFile
                     {
                         damage = 1;
                     }
-
                     // Apply player StatModifier here
                     StatModifier modifier = player.GetTotalDamage(weapon.DamageType);
                     return (int)Math.Round(modifier.ApplyTo(damage));
@@ -160,15 +158,15 @@ namespace DamageMultiplier.PlayerFile
             float finalBossHp = DamageMultiplierScale.GetBossScaleHP(bossDefeatedList.Last().Key);
             if (attackSpeed <= 15)
             {
-                damage = finalBossHp * 0.1f * 0.5f;
+                damage = finalBossHp * 0.2f * 0.5f;
             }
             else if (attackSpeed > 15 && attackSpeed < 20)
             {
-                damage = finalBossHp * 0.1f;
+                damage = finalBossHp * 0.2f;
             }
             else if (attackSpeed >= 20 && attackSpeed < 25)
             {
-                damage = finalBossHp * 0.2f;
+                damage = finalBossHp * 0.3f;
             }
             else if (attackSpeed >= 25)
             {
