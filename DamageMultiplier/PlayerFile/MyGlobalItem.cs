@@ -51,25 +51,24 @@ namespace DamageMultiplier.PlayerFile
                     float bossHP = DamageMultiplierScale.GetBossScaleHP(boss.Key);
                     if (attackSpeed <= 15)
                     {
-                        damage = bossHP * 0.002f * 0.5f;
+                        damage = bossHP * 0.001f * 0.5f;
                     }
                     else if (attackSpeed > 15 && attackSpeed < 20)
                     {
-                        damage = bossHP * 0.002f;
+                        damage = bossHP * 0.001f;
                     }
                     else if (attackSpeed >= 20 && attackSpeed < 25)
                     {
-                        damage = bossHP * 0.003f;
+                        damage = bossHP * 0.002f;
                     }
                     else if (attackSpeed >= 25)
                     {
-                        damage = bossHP * 0.01f;
+                        damage = bossHP * 0.004f;
                     }
                     else
                     {
                         damage = 1;
                     }
-                    // Apply player StatModifier here
                     StatModifier modifier = player.GetTotalDamage(item.DamageType);
                     return (int)Math.Round(modifier.ApplyTo(damage));
                 }
@@ -129,19 +128,19 @@ namespace DamageMultiplier.PlayerFile
                     float bossHP = DamageMultiplierScale.GetBossScaleHP(boss.Key);
                     if (attackSpeed <= 15)
                     {
-                        damage = bossHP * 0.002f * 0.5f;
+                        damage = bossHP * 0.001f * 0.5f;
                     }
                     else if (attackSpeed > 15 && attackSpeed < 20)
                     {
-                        damage = bossHP * 0.002f;
+                        damage = bossHP * 0.001f;
                     }
                     else if (attackSpeed >= 20 && attackSpeed < 25)
                     {
-                        damage = bossHP * 0.003f;
+                        damage = bossHP * 0.002f;
                     }
                     else if (attackSpeed >= 25)
                     {
-                        damage = bossHP * 0.01f;
+                        damage = bossHP * 0.004f;
                     }
                     else
                     {

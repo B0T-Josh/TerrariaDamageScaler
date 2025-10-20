@@ -24,6 +24,7 @@ namespace DamageMultiplier.PlayerFile
 
         public override void OnEnterWorld()
         {
+            var bossDefeated = BossDefeated.bossDefeated;
             var player = Main.LocalPlayer;
             Mod Calamity = ModLoader.GetMod("CalamityMod");
             bool isCalamityLoaded = ModLoader.HasMod("CalamityMod") && Calamity != null;
