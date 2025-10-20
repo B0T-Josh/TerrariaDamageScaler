@@ -26,8 +26,14 @@ namespace DamageMultiplier.PlayerFile
         {
             var bossDefeated = BossDefeated.bossDefeated;
             var player = Main.LocalPlayer;
-            Mod Calamity = ModLoader.GetMod("CalamityMod");
-            bool isCalamityLoaded = ModLoader.HasMod("CalamityMod") && Calamity != null;
+            bool isCalamityLoaded = false;
+            if(ModLoader.TryGetMod("CalamityMod", out Mod calamity))
+            {
+                if(calamity != null)
+                {
+                    isCalamityLoaded = true;
+                }
+            }
             allItems = ContentSamples.ItemsByType; 
             if (playerWeapons.Count > 0)
             {

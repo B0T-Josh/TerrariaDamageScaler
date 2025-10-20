@@ -15,7 +15,6 @@ namespace DamageMultiplier.PlayerFile
             if(npc.boss)
             {
                 BossDefeated.bossDefeated[npc.type] = true;
-                Main.NewText($"Boss defeated: {Lang.GetNPCNameValue(npc.type)}");
                 var player = Main.LocalPlayer;
                 var modPlayer = Main.LocalPlayer.GetModPlayer<MyModPlayer>();
                 bool isCalamityLoaded = ModLoader.HasMod("CalamityMod") && Calamity != null;

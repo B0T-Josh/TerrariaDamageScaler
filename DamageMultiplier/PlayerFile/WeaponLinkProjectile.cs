@@ -9,10 +9,8 @@ namespace DamageMultiplier.PlayerFile
 {
     public class WeaponLinkedProjectile : GlobalProjectile
     {
-        // Stores the normalized weapon name responsible for this projectile
         public string linkedWeaponName = null;
 
-        // Each projectile needs its own data
         public override bool InstancePerEntity => true;
 
         public override void OnSpawn(Projectile projectile, IEntitySource source)
@@ -20,9 +18,10 @@ namespace DamageMultiplier.PlayerFile
             if (projectile.owner < 0 || projectile.owner >= Main.maxPlayers || projectile.hostile)
                 return;
 
-            var player = Main.player[projectile.owner].GetModPlayer<MyModPlayer>();
-            var visited = new HashSet<int>();
             var mainPlayer = Main.player[projectile.owner];
+            var player = mainPlayer.GetModPlayer<MyModPlayer>();
+            var visited = new HashSet<int>();
+
             linkedWeaponName = GetWeaponNameFromSource(source, visited);
 
             Mod Calamity = ModLoader.GetMod("CalamityMod");
@@ -39,24 +38,38 @@ namespace DamageMultiplier.PlayerFile
 
         private string GetWeaponNameFromSource(IEntitySource source, HashSet<int> visited)
         {
-            if (source is EntitySource_ItemUse itemSource && itemSource.Item != null)
+            switch (source)
             {
-                return DamageMultiplierScale.NormalizeName(itemSource.Item.Name);
-            }
-            else if (source is EntitySource_Parent parentSource && parentSource.Entity is Projectile parentProj)
-            {
-                if (!visited.Add(parentProj.whoAmI))
-                {
-                    return null;
-                }
+                case EntitySource_ItemUse itemSource when itemSource.Item != null:
+                    return DamageMultiplierScale.NormalizeName(itemSource.Item.Name);
 
-                var parentGlobal = parentProj.GetGlobalProjectile<WeaponLinkedProjectile>();
-                if (!string.IsNullOrEmpty(parentGlobal.linkedWeaponName))
-                {
-                    return parentGlobal.linkedWeaponName;
-                }
+                case EntitySource_Parent parentSource when parentSource.Entity is Projectile parentProj:
+                    if (!visited.Add(parentProj.whoAmI))
+                        return null;
 
-                return GetWeaponNameFromSource(parentProj.GetSource_FromThis(), visited);
+                    var parentGlobal = parentProj.GetGlobalProjectile<WeaponLinkedProjectile>();
+                    if (!string.IsNullOrEmpty(parentGlobal.linkedWeaponName))
+                        return parentGlobal.linkedWeaponName;
+
+                    return GetWeaponNameFromSource(parentProj.GetSource_FromThis(), visited);
+
+                case EntitySource_Misc miscSource:
+                    if (miscSource.Context == "Summon" || miscSource.Context == "MagicItem" || miscSource.Context == "PlayerAction")
+                    {
+                        if (Main.player.Any(p => p.active))
+                        {
+                            foreach (var player in Main.player)
+                            {
+                                if (!player.active)
+                                    continue;
+
+                                var held = player.HeldItem;
+                                if (held != null && held.damage > 0)
+                                    return DamageMultiplierScale.NormalizeName(held.Name);
+                            }
+                        }
+                    }
+                    break;
             }
 
             return null;

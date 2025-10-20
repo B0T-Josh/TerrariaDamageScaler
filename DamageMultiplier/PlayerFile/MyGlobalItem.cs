@@ -49,19 +49,19 @@ namespace DamageMultiplier.PlayerFile
                 if (!boss.Value)
                 {
                     float bossHP = DamageMultiplierScale.GetBossScaleHP(boss.Key);
-                    if (attackSpeed <= 15)
+                    if (attackSpeed < 10)
                     {
                         damage = bossHP * 0.001f * 0.5f;
                     }
-                    else if (attackSpeed > 15 && attackSpeed < 20)
+                    else if (attackSpeed >= 10 && attackSpeed < 20)
                     {
                         damage = bossHP * 0.001f;
                     }
-                    else if (attackSpeed >= 20 && attackSpeed < 25)
+                    else if (attackSpeed >= 20 && attackSpeed < 30)
                     {
                         damage = bossHP * 0.002f;
                     }
-                    else if (attackSpeed >= 25)
+                    else if (attackSpeed >= 30)
                     {
                         damage = bossHP * 0.004f;
                     }
@@ -77,19 +77,19 @@ namespace DamageMultiplier.PlayerFile
             // If all bosses are defeated, scale off the last boss
             var size = bossList.Count - 1;
             float finalBossHp = DamageMultiplierScale.GetBossScaleHP(bossDefeatedList.Last().Key);
-            if (attackSpeed <= 15)
+            if (attackSpeed < 10)
             {
                 damage = finalBossHp * 0.2f * 0.5f;
             }
-            else if (attackSpeed > 15 && attackSpeed < 20)
+            else if (attackSpeed >= 10 && attackSpeed < 20)
             {
                 damage = finalBossHp * 0.2f;
             }
-            else if (attackSpeed >= 20 && attackSpeed < 25)
+            else if (attackSpeed >= 20 && attackSpeed < 30)
             {
                 damage = finalBossHp * 0.3f;
             }
-            else if (attackSpeed >= 25)
+            else if (attackSpeed >= 30)
             {
                 damage = finalBossHp * 0.5f;
             }
@@ -126,19 +126,19 @@ namespace DamageMultiplier.PlayerFile
                 if (!boss.Value)
                 {
                     float bossHP = DamageMultiplierScale.GetBossScaleHP(boss.Key);
-                    if (attackSpeed <= 15)
+                    if (attackSpeed < 10)
                     {
                         damage = bossHP * 0.001f * 0.5f;
                     }
-                    else if (attackSpeed > 15 && attackSpeed < 20)
+                    else if (attackSpeed >= 10 && attackSpeed < 20)
                     {
                         damage = bossHP * 0.001f;
                     }
-                    else if (attackSpeed >= 20 && attackSpeed < 25)
+                    else if (attackSpeed >= 20 && attackSpeed < 30)
                     {
                         damage = bossHP * 0.002f;
                     }
-                    else if (attackSpeed >= 25)
+                    else if (attackSpeed >= 30)
                     {
                         damage = bossHP * 0.004f;
                     }
@@ -155,19 +155,19 @@ namespace DamageMultiplier.PlayerFile
             // If all bosses are defeated, scale off the last boss
             var size = bossList.Count - 1;
             float finalBossHp = DamageMultiplierScale.GetBossScaleHP(bossDefeatedList.Last().Key);
-            if (attackSpeed <= 15)
+            if (attackSpeed < 10)
             {
                 damage = finalBossHp * 0.2f * 0.5f;
             }
-            else if (attackSpeed > 15 && attackSpeed < 20)
+            else if (attackSpeed >= 10 && attackSpeed < 20)
             {
                 damage = finalBossHp * 0.2f;
             }
-            else if (attackSpeed >= 20 && attackSpeed < 25)
+            else if (attackSpeed >= 20 && attackSpeed < 30)
             {
                 damage = finalBossHp * 0.3f;
             }
-            else if (attackSpeed >= 25)
+            else if (attackSpeed >= 30)
             {
                 damage = finalBossHp * 0.5f;
             }
