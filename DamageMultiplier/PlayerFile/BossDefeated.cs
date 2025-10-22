@@ -99,7 +99,7 @@ namespace DamageMultiplier.PlayerFile
                 return;
             }
 
-            // Run on main thread to ensure ModNPCs are registered
+            // Run safely on the main thread so Calamity NPCs are ready
             Main.QueueMainThreadAction(() =>
             {
                 var downedBossType = calamity.Code.GetType("CalamityMod.DownedBossSystem");
@@ -111,22 +111,9 @@ namespace DamageMultiplier.PlayerFile
 
                 Mod.Logger.Info($"[DamageMultiplier] ✅ Found DownedBossSystem in {downedBossType.FullName}");
 
-                // Manual mapping for known mismatches (field name -> ModNPC registration name)
+                // ✅ Only these bosses will be tracked
                 var manualMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                 {
-                    { "_downedDesertScourge", "DesertScourgeHead" },
-                    { "_downedCrabulon", "Crabulon" },
-                    { "_downedHiveMind", "HiveMind" },
-                    { "_downedPerforator", "PerforatorHive" },      // adjust if needed
-                    { "_downedSlimeGod", "TheSlimeGodCore" },
-                    { "_downedCryogen", "Cryogen" },
-                    { "_downedAquaticScourge", "AquaticScourgeHead" },
-                    { "_downedBrimstoneElemental", "BrimstoneElemental" },
-                    { "_downedCalamitasClone", "CalamitasClone" },
-                    { "_downedLeviathan", "Leviathan" },
-                    { "_downedAstrumAureus", "AstrumAureus" },
-                    { "_downedPlaguebringer", "PlaguebringerGoliath" },
-                    { "_downedRavager", "RavagerBody" },
                     { "_downedAstrumDeus", "AstrumDeusHead" },
                     { "_downedGuardians", "ProfanedGuardianCommander" },
                     { "_downedProvidence", "Providence" },
@@ -138,30 +125,36 @@ namespace DamageMultiplier.PlayerFile
                     { "_downedDoG", "DevourerofGodsHead" },
                     { "_downedYharon", "Yharon" },
                     { "_downedAres", "AresBody" },
-                    { "_downedExoMechs", "AresBody" }, // example, adjust if needed
-                    { "_downedSupremeCalamitas", "SupremeCalamitas" }
-                    // Add more manual pairs if logs show unmatched field names
+                    { "_downedExoMechs", "AresBody" },
                 };
 
-                // Gather all Calamity ModNPCs for fuzzy matching (normalized name -> ModNPC)
-                var calamityNpcs = calamity.GetContent<ModNPC>().ToList();
-                Dictionary<string, ModNPC> normalizedNpcLookup = new(StringComparer.OrdinalIgnoreCase);
-                foreach (var npc in calamityNpcs)
-                {
-                    string normalized = NormalizeName(npc.Name);
-                    if (!normalizedNpcLookup.ContainsKey(normalized))
-                        normalizedNpcLookup[normalized] = npc;
-                }
+                var fields = downedBossType.GetFields(System.Reflection.BindingFlags.Public |
+                                                    System.Reflection.BindingFlags.NonPublic |
+                                                    System.Reflection.BindingFlags.Static);
 
-                // Reflect fields (including private ones)
-                var fields = downedBossType.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
                 int added = 0;
                 var unmatched = new List<string>();
 
-                foreach (var field in fields)
+                foreach (var pair in manualMap)
                 {
-                    if (field.FieldType != typeof(bool))
+                    string fieldName = pair.Key;
+                    string modNpcName = pair.Value;
+
+                    // Try to find matching field in DownedBossSystem
+                    var field = fields.FirstOrDefault(f => f.Name.Equals(fieldName, StringComparison.OrdinalIgnoreCase));
+                    if (field == null)
+                    {
+                        Mod.Logger.Warn($"[DamageMultiplier] ⚠ Field {fieldName} not found in DownedBossSystem.");
+                        unmatched.Add(fieldName);
                         continue;
+                    }
+
+                    if (field.FieldType != typeof(bool))
+                    {
+                        Mod.Logger.Warn($"[DamageMultiplier] ⚠ Field {fieldName} is not boolean.");
+                        unmatched.Add(fieldName);
+                        continue;
+                    }
 
                     bool defeated;
                     try
@@ -171,94 +164,30 @@ namespace DamageMultiplier.PlayerFile
                     catch (Exception ex)
                     {
                         Mod.Logger.Warn($"[DamageMultiplier] ⚠ Could not read {field.Name}: {ex.Message}");
+                        unmatched.Add(fieldName);
                         continue;
                     }
 
-                    // Try manual map first
-                    string modNpcName = null;
-                    if (manualMap.TryGetValue(field.Name, out string m))
-                        modNpcName = m;
-
-                    ModNPC foundNpc = null;
-
-                    // 1) Direct TryFind using manual mapping or cleaned name
-                    if (!string.IsNullOrEmpty(modNpcName))
+                    // Find the ModNPC from Calamity
+                    if (!calamity.TryFind<ModNPC>(modNpcName, out var npc))
                     {
-                        if (calamity.TryFind<ModNPC>(modNpcName, out var npc1))
-                            foundNpc = npc1;
-                    }
-                    else
-                    {
-                        // clean field name: remove leading '_' and 'downed' prefix
-                        string candidate = field.Name;
-                        if (candidate.StartsWith("_"))
-                            candidate = candidate.Substring(1);
-                        if (candidate.StartsWith("downed", StringComparison.OrdinalIgnoreCase))
-                            candidate = candidate.Substring(6);
-
-                        // try direct find with candidate
-                        if (calamity.TryFind<ModNPC>(candidate, out var npc2))
-                            foundNpc = npc2;
+                        Mod.Logger.Warn($"[DamageMultiplier] ⚠ Could not find ModNPC for {modNpcName}");
+                        unmatched.Add(fieldName);
+                        continue;
                     }
 
-                    // 2) Fuzzy lookup by normalized names (if still not found)
-                    if (foundNpc == null)
-                    {
-                        string candidateNorm = NormalizeName(field.Name);
-                        // try variants: remove underscore and 'downed' etc.
-                        candidateNorm = candidateNorm.Replace("downed", "");
-                        candidateNorm = candidateNorm.Trim();
-
-                        // exact normalized match
-                        if (normalizedNpcLookup.TryGetValue(candidateNorm, out var npcExact))
-                            foundNpc = npcExact;
-                        else
-                        {
-                            // substring match: find first npc whose normalized name contains candidateNorm or vice versa
-                            foreach (var kv in normalizedNpcLookup)
-                            {
-                                if (string.IsNullOrEmpty(candidateNorm)) break;
-                                if (kv.Key.Contains(candidateNorm) || candidateNorm.Contains(kv.Key))
-                                {
-                                    foundNpc = kv.Value;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    // 3) If found, set dictionary by NPC Type (the correct int key)
-                    if (foundNpc != null)
-                    {
-                        bossDefeated[foundNpc.Type] = defeated;
-                        Mod.Logger.Info($"[DamageMultiplier] 🧩 {foundNpc.Name} (Type {foundNpc.Type}) ← {field.Name} = {defeated}");
-                        added++;
-                    }
-                    else
-                    {
-                        unmatched.Add(field.Name);
-                        Mod.Logger.Warn($"[DamageMultiplier] ⚠ Unmatched downed flag: {field.Name}");
-                    }
+                    // ✅ Add to bossDefeated dictionary
+                    bossDefeated[npc.Type] = defeated;
+                    Mod.Logger.Info($"[DamageMultiplier] 🧩 Added {npc.Name} (Type {npc.Type}) ← {field.Name} = {defeated}");
+                    added++;
                 }
 
-                Mod.Logger.Info($"[DamageMultiplier] ✅ Calamity bosses mapped: {added}. Unmatched: {unmatched.Count}.");
+                Mod.Logger.Info($"[DamageMultiplier] ✅ Calamity bosses mapped (manual list only): {added}. Unmatched: {unmatched.Count}.");
                 if (unmatched.Count > 0)
-                    Mod.Logger.Info("[DamageMultiplier] Unmatched flags: " + string.Join(", ", unmatched));
+                    Mod.Logger.Info("[DamageMultiplier] Unmatched manual flags: " + string.Join(", ", unmatched));
             });
-
-            // Helper to normalize names: remove non-letters, spaces, to lower
-            static string NormalizeName(string s)
-            {
-                if (string.IsNullOrEmpty(s)) return s ?? "";
-                var sb = new System.Text.StringBuilder(s.Length);
-                foreach (char c in s)
-                {
-                    if (char.IsLetter(c))
-                        sb.Append(char.ToLowerInvariant(c));
-                }
-                return sb.ToString();
-            }
         }
+
 
 
     }
