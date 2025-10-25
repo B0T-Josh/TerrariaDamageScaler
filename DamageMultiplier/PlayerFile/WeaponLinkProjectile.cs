@@ -4,12 +4,14 @@ using Terraria.DataStructures;
 using System.Linq;
 using System.Collections.Generic;
 using Terraria.ID;
+using System;
 
 namespace DamageMultiplier.PlayerFile
 {
     public class WeaponLinkedProjectile : GlobalProjectile
     {
         public string linkedWeaponName = null;
+        private bool hasAppliedScaling = false;
 
         public override bool InstancePerEntity => true;
 
@@ -24,8 +26,8 @@ namespace DamageMultiplier.PlayerFile
 
             linkedWeaponName = GetWeaponNameFromSource(source, visited);
 
-            Mod Calamity = ModLoader.GetMod("CalamityMod");
-            bool isCalamityLoaded = ModLoader.HasMod("CalamityMod") && Calamity != null;
+            Mod calamity = ModLoader.GetMod("CalamityMod");
+            bool isCalamityLoaded = ModLoader.HasMod("CalamityMod") && calamity != null;
 
             if (!string.IsNullOrEmpty(linkedWeaponName) &&
                 player.playerWeapons.Any(w => DamageMultiplierScale.NormalizeName(w) == linkedWeaponName))
@@ -33,6 +35,54 @@ namespace DamageMultiplier.PlayerFile
                 int projectileDamage = MyGlobalItem.CalculateDamageByName(mainPlayer, linkedWeaponName, isCalamityLoaded);
                 projectile.damage = projectileDamage;
                 projectile.originalDamage = projectileDamage;
+            }
+
+            if (projectile.minion || projectile.sentry)
+            {
+                ApplyMinionScaling(mainPlayer, projectile, isCalamityLoaded);
+                hasAppliedScaling = true;
+            }
+        }
+
+        public override void AI(Projectile projectile)
+        {
+            if ((projectile.minion || projectile.sentry) && !hasAppliedScaling)
+            {
+                var mainPlayer = Main.player[projectile.owner];
+                Mod calamity = ModLoader.GetMod("CalamityMod");
+                bool isCalamityLoaded = ModLoader.HasMod("CalamityMod") && calamity != null;
+
+                ApplyMinionScaling(mainPlayer, projectile, isCalamityLoaded);
+                hasAppliedScaling = true;
+            }
+        }
+
+        private void ApplyMinionScaling(Player player, Projectile projectile, bool isCalamityLoaded)
+        {
+            if (string.IsNullOrEmpty(linkedWeaponName))
+            {
+                var heldItem = player.HeldItem;
+                if (heldItem != null && !string.IsNullOrEmpty(heldItem.Name))
+                {
+                    linkedWeaponName = DamageMultiplierScale.NormalizeName(heldItem.Name);
+                }
+            }
+
+            if (string.IsNullOrEmpty(linkedWeaponName))
+            {
+                ModContent.GetInstance<DamageMultiplier>().Logger.Warn($"[DamageMultiplier] ⚠ Could not determine linked weapon for minion {projectile.Name}.");
+                return;
+            }
+
+            try
+            {
+                int scaledDamage = MyGlobalItem.CalculateDamageByName(player, linkedWeaponName, isCalamityLoaded);
+                projectile.damage = scaledDamage;
+                projectile.originalDamage = scaledDamage;
+            }
+            catch (System.Exception ex)
+            {
+                Mod.Logger.Warn("Damage is not scaling");
             }
         }
 
