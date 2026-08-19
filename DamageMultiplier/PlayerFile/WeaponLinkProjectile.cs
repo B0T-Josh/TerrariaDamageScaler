@@ -26,8 +26,7 @@ namespace DamageMultiplier.PlayerFile
 
             linkedWeaponName = GetWeaponNameFromSource(source, visited);
 
-            Mod calamity = ModLoader.GetMod("CalamityMod");
-            bool isCalamityLoaded = ModLoader.HasMod("CalamityMod") && calamity != null;
+            bool isCalamityLoaded = ModLoader.TryGetMod("CalamityMod", out _);
 
             if (!string.IsNullOrEmpty(linkedWeaponName) &&
                 player.playerWeapons.Any(w => DamageMultiplierScale.NormalizeName(w) == linkedWeaponName))
@@ -49,8 +48,7 @@ namespace DamageMultiplier.PlayerFile
             if ((projectile.minion || projectile.sentry) && !hasAppliedScaling)
             {
                 var mainPlayer = Main.player[projectile.owner];
-                Mod calamity = ModLoader.GetMod("CalamityMod");
-                bool isCalamityLoaded = ModLoader.HasMod("CalamityMod") && calamity != null;
+                bool isCalamityLoaded = ModLoader.TryGetMod("CalamityMod", out _);
 
                 ApplyMinionScaling(mainPlayer, projectile, isCalamityLoaded);
                 hasAppliedScaling = true;

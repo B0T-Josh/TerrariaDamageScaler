@@ -9,7 +9,6 @@ namespace DamageMultiplier.PlayerFile
 {   
     public class MyGlobalItem : GlobalItem
     {
-        private static Mod Calamity = ModLoader.GetMod("CalamityMod");
         public override void ModifyTooltips(Item item, List<TooltipLine> tooltips)
         {
             var player = Main.LocalPlayer;
@@ -19,7 +18,7 @@ namespace DamageMultiplier.PlayerFile
                 modPlayer.playerWeapons.Any(w => DamageMultiplierScale.NormalizeName(w) ==
                                                  DamageMultiplierScale.NormalizeName(item.Name)))
             {
-                bool isCalamityLoaded = ModLoader.HasMod("CalamityMod") && Calamity != null;
+                bool isCalamityLoaded = ModLoader.TryGetMod("CalamityMod", out _);
                 int scaledDamage = CalculateDamage(player, item, isCalamityLoaded);
 
                 item.damage = scaledDamage;

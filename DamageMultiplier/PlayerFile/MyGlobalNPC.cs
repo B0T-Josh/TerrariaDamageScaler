@@ -9,7 +9,6 @@ namespace DamageMultiplier.PlayerFile
     public class MyGlobalNPC : GlobalNPC
     {
 
-        private static Mod Calamity = ModLoader.GetMod("CalamityMod");
         public override void OnKill(NPC npc)
         {
             if(npc.boss)
@@ -17,7 +16,7 @@ namespace DamageMultiplier.PlayerFile
                 BossDefeated.bossDefeated[npc.type] = true;
                 var player = Main.LocalPlayer;
                 var modPlayer = Main.LocalPlayer.GetModPlayer<MyModPlayer>();
-                bool isCalamityLoaded = ModLoader.HasMod("CalamityMod") && Calamity != null;
+                bool isCalamityLoaded = ModLoader.TryGetMod("CalamityMod", out _);
                 Dictionary<int, Item> allItems = ContentSamples.ItemsByType;
                 foreach (var weaponItem in modPlayer.playerWeapons)
                 {

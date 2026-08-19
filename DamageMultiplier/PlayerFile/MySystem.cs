@@ -65,8 +65,7 @@ namespace DamageMultiplier.PlayerFile
                 string weaponToRemove = string.Join(" ", args.Skip(1)).Trim().Replace(" ", "").ToLowerInvariant();
                 if (modPlayer.playerWeapons.Remove(weaponToRemove))
                 {
-                    Mod Calamity = ModLoader.GetMod("CalamityMod");
-                    bool isCalamityLoaded = ModLoader.HasMod("CalamityMod") && Calamity != null;
+                    bool isCalamityLoaded = ModLoader.TryGetMod("CalamityMod", out _);
                     Dictionary<int, Item> allItems = ContentSamples.ItemsByType;
                     foreach (var weapons in modPlayer.playerWeapons)
                     {
@@ -95,8 +94,7 @@ namespace DamageMultiplier.PlayerFile
                     var player = Main.LocalPlayer;
                     modPlayer.playerWeapons.Add(weaponToAdd);
                     caller.Reply($"Weapon added: {weaponToAdd}", Color.Green);
-                    Mod Calamity = ModLoader.GetMod("CalamityMod");
-                    bool isCalamityLoaded = ModLoader.HasMod("CalamityMod") && Calamity != null;
+                    bool isCalamityLoaded = ModLoader.TryGetMod("CalamityMod", out _);
                     Dictionary<int, Item> allItems = modPlayer.allItems;
                     foreach (var weapons in modPlayer.playerWeapons)
                     {
