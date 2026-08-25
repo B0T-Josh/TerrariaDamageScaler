@@ -12,6 +12,7 @@ namespace DamageMultiplier.PlayerFile
         public override CommandType Type => CommandType.Chat;
         public override string Command => "weapon";
         public override string Description => "Add, remove, or list weapons for damage scaling.";
+        
         bool IsValidWeapon(string input)
         {
             Player player = Main.LocalPlayer;
@@ -19,7 +20,7 @@ namespace DamageMultiplier.PlayerFile
 
             foreach (Item item in player.inventory)
             {
-                if (item != null && !item.IsAir && item.damage > 0) // damage > 0 → likely a weapon
+                if (item != null && !item.IsAir && item.damage > 0)
                 {
                     string normName = DamageMultiplierScale.NormalizeName(item.Name);
                     string normModName = DamageMultiplierScale.NormalizeName(item.ModItem?.Name ?? "");
@@ -30,7 +31,6 @@ namespace DamageMultiplier.PlayerFile
                     }
                 }
             }
-
             return false;
         }
 
@@ -65,7 +65,6 @@ namespace DamageMultiplier.PlayerFile
                 string weaponToRemove = string.Join(" ", args.Skip(1)).Trim().Replace(" ", "").ToLowerInvariant();
                 if (modPlayer.playerWeapons.Remove(weaponToRemove))
                 {
-                    bool isCalamityLoaded = ModLoader.TryGetMod("CalamityMod", out _);
                     Dictionary<int, Item> allItems = ContentSamples.ItemsByType;
                     foreach (var weapons in modPlayer.playerWeapons)
                     {
@@ -84,7 +83,6 @@ namespace DamageMultiplier.PlayerFile
                 return;
             }
             
-            // Add weapon
             string weaponToAdd = string.Join(" ", args).Trim().ToLower().Replace(" ", "");
 
             if (IsValidWeapon(weaponToAdd))
@@ -94,7 +92,6 @@ namespace DamageMultiplier.PlayerFile
                     var player = Main.LocalPlayer;
                     modPlayer.playerWeapons.Add(weaponToAdd);
                     caller.Reply($"Weapon added: {weaponToAdd}", Color.Green);
-                    bool isCalamityLoaded = ModLoader.TryGetMod("CalamityMod", out _);
                     Dictionary<int, Item> allItems = modPlayer.allItems;
                     foreach (var weapons in modPlayer.playerWeapons)
                     {
@@ -104,7 +101,7 @@ namespace DamageMultiplier.PlayerFile
                             {
                                 Item weapon = new Item();
                                 weapon.SetDefaults(items.Key);
-                                int damage = MyGlobalItem.CalculateDamage(player, items.Value, isCalamityLoaded);
+                                int damage = MyGlobalItem.CalculateDamage(player, items.Value);
                                 modPlayer.ItemWithDamage.Add(items.Key, damage);
                                 modPlayer.weaponName.Add(weapons, items.Key);
                                 weapon.damage = damage;

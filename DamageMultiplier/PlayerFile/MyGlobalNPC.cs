@@ -1,34 +1,36 @@
 using System.Collections.Generic;
-using MonoMod.Core.Utils;
 using Terraria;
-using Terraria.ID;
+using Terraria.ID; // <--- This was missing!
 using Terraria.ModLoader;
 
 namespace DamageMultiplier.PlayerFile
 {
     public class MyGlobalNPC : GlobalNPC
     {
-
         public override void OnKill(NPC npc)
         {
-            if(npc.boss)
+            if (npc.boss)
             {
-                BossDefeated.bossDefeated[npc.type] = true;
-                var player = Main.LocalPlayer;
-                var modPlayer = Main.LocalPlayer.GetModPlayer<MyModPlayer>();
-                bool isCalamityLoaded = ModLoader.TryGetMod("CalamityMod", out _);
                 Dictionary<int, Item> allItems = ContentSamples.ItemsByType;
-                foreach (var weaponItem in modPlayer.playerWeapons)
+
+                // Loop through all active connected players instead of Main.LocalPlayer
+                for (int i = 0; i < Main.maxPlayers; i++)
                 {
-                    foreach (var item in allItems)
+                    Player player = Main.player[i];
+                    if (player != null && player.active)
                     {
-                        if (DamageMultiplierScale.NormalizeName(item.Value.Name) == weaponItem)
+                        var modPlayer = player.GetModPlayer<MyModPlayer>();
+
+                        foreach (var weaponItem in modPlayer.playerWeapons)
                         {
-                            Item weapon = new Item();
-                            weapon.SetDefaults(item.Key);
-                            int damage = MyGlobalItem.CalculateDamage(player, item.Value, isCalamityLoaded);
-                            weapon.damage = damage;
-                            modPlayer.ItemWithDamage[item.Key] = damage;
+                            foreach (var item in allItems)
+                            {
+                                if (DamageMultiplierScale.NormalizeName(item.Value.Name) == weaponItem)
+                                {
+                                    int damage = MyGlobalItem.CalculateDamage(player, item.Value);
+                                    modPlayer.ItemWithDamage[item.Key] = damage;
+                                }
+                            }
                         }
                     }
                 }

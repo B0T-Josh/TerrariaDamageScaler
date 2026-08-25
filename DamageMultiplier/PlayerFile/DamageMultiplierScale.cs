@@ -4,7 +4,6 @@ using Terraria.ID;
 using System.Collections.Generic;
 using System.Linq;
 using Terraria.WorldBuilding;
-//Fix Summon Damage
 
 namespace DamageMultiplier.PlayerFile
 {

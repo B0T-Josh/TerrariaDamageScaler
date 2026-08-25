@@ -12,6 +12,8 @@ namespace DamageMultiplier.PlayerFile
         public List<string> playerWeapons = new List<string>();
         public Dictionary<int, Item> allItems;
         public Dictionary<string, int> weaponName = new Dictionary<string, int>();
+        public Dictionary<string, float> reforgeMultipliers = new Dictionary<string, float>();
+        
         public override void SaveData(Terraria.ModLoader.IO.TagCompound tag)
         {
             tag["weapons"] = playerWeapons;
@@ -24,17 +26,13 @@ namespace DamageMultiplier.PlayerFile
 
         public override void OnEnterWorld()
         {
-            var bossDefeated = BossDefeated.bossDefeated;
+            // FIX: Don't execute local UI / text routines if running on a dedicated server
+            if (Main.netMode == NetmodeID.Server)
+                return;
+
             var player = Main.LocalPlayer;
-            bool isCalamityLoaded = false;
-            if(ModLoader.TryGetMod("CalamityMod", out Mod calamity))
-            {
-                if(calamity != null)
-                {
-                    isCalamityLoaded = true;
-                }
-            }
             allItems = ContentSamples.ItemsByType; 
+            
             if (playerWeapons.Count > 0)
             {
                 foreach (var weapons in playerWeapons)
@@ -43,17 +41,11 @@ namespace DamageMultiplier.PlayerFile
                     {
                         if (DamageMultiplierScale.NormalizeName(items.Value.Name) == weapons)
                         {
-                            int damage = MyGlobalItem.CalculateDamage(player, items.Value, isCalamityLoaded);
-                            ItemWithDamage.Add(items.Key, damage);
-                            weaponName.Add(DamageMultiplierScale.NormalizeName(items.Value.Name), items.Key);
+                            int damage = MyGlobalItem.CalculateDamage(player, items.Value);
+                            ItemWithDamage[items.Key] = damage;
+                            weaponName[DamageMultiplierScale.NormalizeName(items.Value.Name)] = items.Key;
                         }
                     }
-                }
-                Item weapon = new Item();
-                foreach (var itemId in ItemWithDamage)
-                {
-                    weapon.SetDefaults(itemId.Key);
-                    weapon.damage = itemId.Value;
                 }
             }
             else

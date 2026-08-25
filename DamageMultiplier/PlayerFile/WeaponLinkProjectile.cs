@@ -26,19 +26,17 @@ namespace DamageMultiplier.PlayerFile
 
             linkedWeaponName = GetWeaponNameFromSource(source, visited);
 
-            bool isCalamityLoaded = ModLoader.TryGetMod("CalamityMod", out _);
-
             if (!string.IsNullOrEmpty(linkedWeaponName) &&
                 player.playerWeapons.Any(w => DamageMultiplierScale.NormalizeName(w) == linkedWeaponName))
             {
-                int projectileDamage = MyGlobalItem.CalculateDamageByName(mainPlayer, linkedWeaponName, isCalamityLoaded);
+                int projectileDamage = MyGlobalItem.CalculateDamageByName(mainPlayer, linkedWeaponName);
                 projectile.damage = projectileDamage;
                 projectile.originalDamage = projectileDamage;
             }
 
             if (projectile.minion || projectile.sentry)
             {
-                ApplyMinionScaling(mainPlayer, projectile, isCalamityLoaded);
+                ApplyMinionScaling(mainPlayer, projectile);
                 hasAppliedScaling = true;
             }
         }
@@ -48,14 +46,12 @@ namespace DamageMultiplier.PlayerFile
             if ((projectile.minion || projectile.sentry) && !hasAppliedScaling)
             {
                 var mainPlayer = Main.player[projectile.owner];
-                bool isCalamityLoaded = ModLoader.TryGetMod("CalamityMod", out _);
-
-                ApplyMinionScaling(mainPlayer, projectile, isCalamityLoaded);
+                ApplyMinionScaling(mainPlayer, projectile);
                 hasAppliedScaling = true;
             }
         }
 
-        private void ApplyMinionScaling(Player player, Projectile projectile, bool isCalamityLoaded)
+        private void ApplyMinionScaling(Player player, Projectile projectile)
         {
             if (string.IsNullOrEmpty(linkedWeaponName))
             {
@@ -74,13 +70,13 @@ namespace DamageMultiplier.PlayerFile
 
             try
             {
-                int scaledDamage = MyGlobalItem.CalculateDamageByName(player, linkedWeaponName, isCalamityLoaded);
+                int scaledDamage = MyGlobalItem.CalculateDamageByName(player, linkedWeaponName);
                 projectile.damage = scaledDamage;
                 projectile.originalDamage = scaledDamage;
             }
             catch (System.Exception ex)
             {
-                Mod.Logger.Warn("Damage is not scaling");
+                Mod.Logger.Warn($"Damage is not scaling: {ex.Message}");
             }
         }
 
@@ -106,12 +102,12 @@ namespace DamageMultiplier.PlayerFile
                     {
                         if (Main.player.Any(p => p.active))
                         {
-                            foreach (var player in Main.player)
+                            foreach (var p in Main.player)
                             {
-                                if (!player.active)
+                                if (!p.active)
                                     continue;
 
-                                var held = player.HeldItem;
+                                var held = p.HeldItem;
                                 if (held != null && held.damage > 0)
                                     return DamageMultiplierScale.NormalizeName(held.Name);
                             }

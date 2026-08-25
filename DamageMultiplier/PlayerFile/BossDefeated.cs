@@ -1,194 +1,103 @@
-using System.Collections.Generic;
-using System.IO;
-using Terraria;
-using System.Linq;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using Terraria;
 using Terraria.ID;
 using Terraria.ModLoader;
-using Terraria.ModLoader.IO;
 
 namespace DamageMultiplier.PlayerFile
 {
     public class BossDefeated : ModSystem
     {
-        public static Dictionary<int, bool> bossDefeated = new();
-        private bool calamityChecked = false;
+        public static List<BossData> OrderedBosses = new List<BossData>();
 
-        public override void OnWorldLoad()
+        public struct BossData
         {
-            ModContent.GetInstance<DamageMultiplier>().Logger.Info("[DamageMultiplier] OnWorldLoad() triggered");
-            LoadVanillaBossProgress();
-            TryLoadCalamityBossProgress();
+            public string InternalName;
+            public float Progression;
+            public List<int> NpcIDs;
+            public Func<bool> IsDowned;
         }
 
-        public override void LoadWorldData(TagCompound tag)
+        public override void PostAddRecipes()
         {
-            ModContent.GetInstance<DamageMultiplier>().Logger.Info("[DamageMultiplier] LoadWorldData() triggered");
-            LoadVanillaBossProgress();
-            TryLoadCalamityBossProgress();
-        }
+            OrderedBosses.Clear();
 
-        public override void PostWorldGen()
-        {
-            ModContent.GetInstance<DamageMultiplier>().Logger.Info("[DamageMultiplier] PostWorldGen() triggered");
-            TryLoadCalamityBossProgress();
-        }
-
-        public override void PostUpdateEverything()
-        {
-            if (!calamityChecked)
+            if (ModLoader.TryGetMod("BossChecklist", out Mod bossChecklist))
             {
-                calamityChecked = true;
-                TryLoadCalamityBossProgress();
-                Main.NewText("Loaded Calamity boss progress!", Microsoft.Xna.Framework.Color.Cyan);
-            }
-        }
-
-        public override void SaveWorldData(TagCompound tag) { }
-
-        public override void NetSend(BinaryWriter writer)
-        {
-            writer.Write(bossDefeated.Count);
-            foreach (var pair in bossDefeated)
-            {
-                writer.Write(pair.Key);
-                writer.Write(pair.Value);
-            }
-        }
-
-        public override void NetReceive(BinaryReader reader)
-        {
-            bossDefeated.Clear();
-            int count = reader.ReadInt32();
-            for (int i = 0; i < count; i++)
-            {
-                int key = reader.ReadInt32();
-                bool value = reader.ReadBoolean();
-                bossDefeated[key] = value;
-            }
-        }
-
-        private void LoadVanillaBossProgress()
-        {
-            bossDefeated.Clear();
-
-            bossDefeated[NPCID.KingSlime] = NPC.downedSlimeKing;
-            bossDefeated[NPCID.EyeofCthulhu] = NPC.downedBoss1;
-            bossDefeated[NPCID.BrainofCthulhu] = NPC.downedBoss2;
-            bossDefeated[NPCID.SkeletronHead] = NPC.downedBoss3;
-            bossDefeated[NPCID.WallofFlesh] = Main.hardMode;
-            bossDefeated[NPCID.QueenSlimeBoss] = NPC.downedQueenSlime;
-            bossDefeated[NPCID.TheDestroyer] = NPC.downedMechBoss1;
-            bossDefeated[NPCID.Spazmatism] = NPC.downedMechBoss2;
-            bossDefeated[NPCID.SkeletronPrime] = NPC.downedMechBoss3;
-            bossDefeated[NPCID.Plantera] = NPC.downedPlantBoss;
-            bossDefeated[NPCID.Golem] = NPC.downedGolemBoss;
-            bossDefeated[NPCID.DukeFishron] = NPC.downedFishron;
-            bossDefeated[NPCID.EmpressButterfly] = NPC.downedEmpressOfLight;
-            bossDefeated[NPCID.CultistBoss] = NPC.downedAncientCultist;
-            bossDefeated[NPCID.MoonLordCore] = NPC.downedMoonlord;
-        }
-
-        private void TryLoadCalamityBossProgress()
-        {
-            Mod.Logger.Info("[DamageMultiplier] ▶ TryLoadCalamityBossProgress() called");
-
-            if (!ModLoader.TryGetMod("CalamityMod", out Mod calamity))
-            {
-                Mod.Logger.Warn("[DamageMultiplier] ❌ CalamityMod not found.");
-                return;
-            }
-
-            // Run safely on the main thread so Calamity NPCs are ready
-            Main.QueueMainThreadAction(() =>
-            {
-                var downedBossType = calamity.Code.GetType("CalamityMod.DownedBossSystem");
-                if (downedBossType == null)
+                var result = bossChecklist.Call("GetBossInfoDictionary", Mod, "1.1.5.5");
+                
+                if (result is Dictionary<string, Dictionary<string, object>> bossInfoDict)
                 {
-                    Mod.Logger.Warn("[DamageMultiplier] ❌ DownedBossSystem type not found.");
-                    return;
+                    foreach (var entry in bossInfoDict)
+                    {
+                        // --- NEW FILTER: Ignore all bosses from The Stars Above ---
+                        if (entry.Key.StartsWith("StarsAbove", StringComparison.OrdinalIgnoreCase))
+                        {
+                            continue; // Skips this boss and moves to the next one in the loop
+                        }
+
+                        var data = entry.Value;
+                        
+                        // Extract the data fields
+                        float prog = data.ContainsKey("progression") ? Convert.ToSingle(data["progression"]) : 0f;
+                        List<int> npcIds = data.ContainsKey("npcIDs") ? (data["npcIDs"] as List<int>) : new List<int>();
+                        Func<bool> downed = data.ContainsKey("downed") ? (data["downed"] as Func<bool>) : () => false;
+                        
+                        // Check if Boss Checklist considers this a main boss
+                        bool isBoss = data.ContainsKey("isBoss") ? Convert.ToBoolean(data["isBoss"]) : false;
+
+                        // Only add to our list if it is a main boss AND has an NPC ID
+                        if (isBoss && npcIds != null && npcIds.Count > 0)
+                        {
+                            OrderedBosses.Add(new BossData
+                            {
+                                InternalName = entry.Key,
+                                Progression = prog,
+                                NpcIDs = npcIds,
+                                IsDowned = downed
+                            });
+                        }
+                    }
+                    
+                    OrderedBosses = OrderedBosses.OrderBy(b => b.Progression).ToList();
+                    Mod.Logger.Info($"[DamageMultiplier] Loaded {OrderedBosses.Count} MAIN bosses from Boss Checklist (Stars Above ignored)!");
+                    return; 
                 }
+            }
 
-                Mod.Logger.Info($"[DamageMultiplier] ✅ Found DownedBossSystem in {downedBossType.FullName}");
+            Mod.Logger.Warn("[DamageMultiplier] Boss Checklist not found. Falling back to Vanilla bosses only.");
+            LoadVanillaFallback();
+        }
 
-                // ✅ Only these bosses will be tracked
-                var manualMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-                {
-                    { "_downedAstrumDeus", "AstrumDeusHead" },
-                    { "_downedGuardians", "ProfanedGuardianCommander" },
-                    { "_downedProvidence", "Providence" },
-                    { "_downedStormWeaver", "StormWeaverHead" },
-                    { "_downedCeaselessVoid", "CeaselessVoid" },
-                    { "_downedSignus", "Signus" },
-                    { "_downedPolterghast", "Polterghast" },
-                    { "_downedBoomerDuke", "OldDuke" },
-                    { "_downedDoG", "DevourerofGodsHead" },
-                    { "_downedYharon", "Yharon" },
-                    { "_downedAres", "AresBody" },
-                    { "_downedExoMechs", "AresBody" },
-                };
+        private void LoadVanillaFallback()
+        {
+            AddVanillaBoss("KingSlime", 1f, NPCID.KingSlime, () => NPC.downedSlimeKing);
+            AddVanillaBoss("EyeofCthulhu", 2f, NPCID.EyeofCthulhu, () => NPC.downedBoss1);
+            AddVanillaBoss("EaterofWorlds", 3f, NPCID.EaterofWorldsHead, () => NPC.downedBoss2);
+            AddVanillaBoss("Skeletron", 4f, NPCID.SkeletronHead, () => NPC.downedBoss3);
+            AddVanillaBoss("WallofFlesh", 5f, NPCID.WallofFlesh, () => Main.hardMode);
+            AddVanillaBoss("QueenSlime", 6f, NPCID.QueenSlimeBoss, () => NPC.downedQueenSlime);
+            AddVanillaBoss("TheDestroyer", 7f, NPCID.TheDestroyer, () => NPC.downedMechBoss1);
+            AddVanillaBoss("TheTwins", 8f, NPCID.Spazmatism, () => NPC.downedMechBoss2);
+            AddVanillaBoss("SkeletronPrime", 9f, NPCID.SkeletronPrime, () => NPC.downedMechBoss3);
+            AddVanillaBoss("Plantera", 10f, NPCID.Plantera, () => NPC.downedPlantBoss);
+            AddVanillaBoss("Golem", 11f, NPCID.Golem, () => NPC.downedGolemBoss);
+            AddVanillaBoss("DukeFishron", 12f, NPCID.DukeFishron, () => NPC.downedFishron);
+            AddVanillaBoss("EmpressOfLight", 13f, NPCID.EmpressButterfly, () => NPC.downedEmpressOfLight);
+            AddVanillaBoss("LunaticCultist", 14f, NPCID.CultistBoss, () => NPC.downedAncientCultist);
+            AddVanillaBoss("MoonLord", 15f, NPCID.MoonLordCore, () => NPC.downedMoonlord);
+        }
 
-                var fields = downedBossType.GetFields(System.Reflection.BindingFlags.Public |
-                                                    System.Reflection.BindingFlags.NonPublic |
-                                                    System.Reflection.BindingFlags.Static);
-
-                int added = 0;
-                var unmatched = new List<string>();
-
-                foreach (var pair in manualMap)
-                {
-                    string fieldName = pair.Key;
-                    string modNpcName = pair.Value;
-
-                    // Try to find matching field in DownedBossSystem
-                    var field = fields.FirstOrDefault(f => f.Name.Equals(fieldName, StringComparison.OrdinalIgnoreCase));
-                    if (field == null)
-                    {
-                        Mod.Logger.Warn($"[DamageMultiplier] ⚠ Field {fieldName} not found in DownedBossSystem.");
-                        unmatched.Add(fieldName);
-                        continue;
-                    }
-
-                    if (field.FieldType != typeof(bool))
-                    {
-                        Mod.Logger.Warn($"[DamageMultiplier] ⚠ Field {fieldName} is not boolean.");
-                        unmatched.Add(fieldName);
-                        continue;
-                    }
-
-                    bool defeated;
-                    try
-                    {
-                        defeated = (bool)field.GetValue(null);
-                    }
-                    catch (Exception ex)
-                    {
-                        Mod.Logger.Warn($"[DamageMultiplier] ⚠ Could not read {field.Name}: {ex.Message}");
-                        unmatched.Add(fieldName);
-                        continue;
-                    }
-
-                    // Find the ModNPC from Calamity
-                    if (!calamity.TryFind<ModNPC>(modNpcName, out var npc))
-                    {
-                        Mod.Logger.Warn($"[DamageMultiplier] ⚠ Could not find ModNPC for {modNpcName}");
-                        unmatched.Add(fieldName);
-                        continue;
-                    }
-
-                    // ✅ Add to bossDefeated dictionary
-                    bossDefeated[npc.Type] = defeated;
-                    Mod.Logger.Info($"[DamageMultiplier] 🧩 Added {npc.Name} (Type {npc.Type}) ← {field.Name} = {defeated}");
-                    added++;
-                }
-
-                Mod.Logger.Info($"[DamageMultiplier] ✅ Calamity bosses mapped (manual list only): {added}. Unmatched: {unmatched.Count}.");
-                if (unmatched.Count > 0)
-                    Mod.Logger.Info("[DamageMultiplier] Unmatched manual flags: " + string.Join(", ", unmatched));
+        private void AddVanillaBoss(string name, float prog, int npcId, Func<bool> downedFunc)
+        {
+            OrderedBosses.Add(new BossData
+            {
+                InternalName = name,
+                Progression = prog,
+                NpcIDs = new List<int> { npcId },
+                IsDowned = downedFunc
             });
         }
-
-
-
     }
 }
