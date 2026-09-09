@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using Terraria;
-using Terraria.ID; // <--- This was missing!
+using Terraria.ID; 
 using Terraria.ModLoader;
 
 namespace DamageMultiplier.PlayerFile
@@ -13,7 +13,6 @@ namespace DamageMultiplier.PlayerFile
             {
                 Dictionary<int, Item> allItems = ContentSamples.ItemsByType;
 
-                // Loop through all active connected players instead of Main.LocalPlayer
                 for (int i = 0; i < Main.maxPlayers; i++)
                 {
                     Player player = Main.player[i];
@@ -27,7 +26,8 @@ namespace DamageMultiplier.PlayerFile
                             {
                                 if (DamageMultiplierScale.NormalizeName(item.Value.Name) == weaponItem)
                                 {
-                                    int damage = MyGlobalItem.CalculateDamage(player, item.Value);
+                                    // NEW NAMING CONVENTION HERE
+                                    int damage = MyGlobalItem.CalculateTotalDamage(player, item.Value);
                                     modPlayer.ItemWithDamage[item.Key] = damage;
                                 }
                             }

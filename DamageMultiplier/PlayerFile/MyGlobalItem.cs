@@ -24,7 +24,7 @@ namespace DamageMultiplier.PlayerFile
             var modPlayer = player.GetModPlayer<MyModPlayer>();
             string normalizedName = DamageMultiplierScale.NormalizeName(item.Name);
 
-            if (!modPlayer.playerWeapons.Any(w => DamageMultiplierScale.NormalizeName(w) == normalizedName))
+            if (!modPlayer.playerWeapons.Contains(normalizedName))
                 return;
 
             if (item.prefix == lastSeenPrefix)
@@ -46,32 +46,6 @@ namespace DamageMultiplier.PlayerFile
             return item.damage / (float)baseline.damage;
         }
 
-        public override void ModifyTooltips(Item item, List<TooltipLine> tooltips)
-        {
-            var player = Main.LocalPlayer;
-            var modPlayer = player.GetModPlayer<MyModPlayer>();
-
-            if (!item.IsAir &&
-                modPlayer.playerWeapons.Any(w => DamageMultiplierScale.NormalizeName(w) ==
-                                                 DamageMultiplierScale.NormalizeName(item.Name)))
-            {
-                TryCaptureReforgeMultiplier(item, player);
-
-                int scaledDamage = CalculateDamage(player, item);
-                item.damage = scaledDamage;
-
-                foreach (TooltipLine line in tooltips)
-                {
-                    if (line.Mod == "Terraria" && line.Name == "Damage")
-                    {
-                        string damageType = item.DamageType.DisplayName.ToString();
-                        line.Text = $"{scaledDamage} {damageType} damage";
-                        break;
-                    }
-                }
-            }
-        }
-
         private static float GetReforgeMultiplier(Player player, string normalizedWeaponName)
         {
             var modPlayer = player.GetModPlayer<MyModPlayer>();
@@ -80,127 +54,105 @@ namespace DamageMultiplier.PlayerFile
                 : 1f;
         }
 
-        public static int CalculateDamage(Player player, Item item)
+        // NEW: This natively scales the weapon's true combat damage (including tooltips automatically)
+        public override void ModifyWeaponDamage(Item item, Player player, ref StatModifier damage)
         {
-            int attackSpeed = item.useTime;
-            float damage;
-            var bossList = BossDefeated.OrderedBosses;
+            var modPlayer = player.GetModPlayer<MyModPlayer>();
+            string normalizedName = DamageMultiplierScale.NormalizeName(item.Name);
 
-            foreach (var boss in bossList)
+            if (modPlayer.playerWeapons.Contains(normalizedName))
             {
-                if (!boss.IsDowned.Invoke())
-                {
-                    int primaryNpcId = boss.NpcIDs.First();
-                    float bossHP = DamageMultiplierScale.GetBossScaleHP(primaryNpcId);
-                    
-                    if (attackSpeed < 10) damage = bossHP * 0.001f;
-                    else if (attackSpeed >= 10 && attackSpeed < 20) damage = bossHP * 0.002f;
-                    else if (attackSpeed >= 20 && attackSpeed < 30) damage = bossHP * 0.003f;
-                    else if (attackSpeed >= 30) damage = bossHP * 0.004f;
-                    else damage = 1;
-
-                    StatModifier modifier = player.GetTotalDamage(item.DamageType);
-                    float multiplier = GetReforgeMultiplier(player, DamageMultiplierScale.NormalizeName(item.Name));
-                    if(item.DamageType == DamageClass.Magic) {
-                        if(item.mana > 28) 
-                            return (int)Math.Round(modifier.ApplyTo((damage*5)) * multiplier);
-                        else 
-                            return (int)Math.Round(modifier.ApplyTo(damage) * multiplier);
-                    }
-                    return (int)Math.Round(modifier.ApplyTo(damage) * multiplier);
-                }
-            }
-
-            if (bossList.Count > 0)
-            {
-                int finalBossId = bossList.Last().NpcIDs.First();
-                float finalBossHp = DamageMultiplierScale.GetBossScaleHP(finalBossId);
+                float scaledBaseDamage = GetProgressionBaseDamage(player, item);
                 
-                if (attackSpeed < 10) damage = finalBossHp * 0.05f;
-                else if (attackSpeed >= 10 && attackSpeed < 20) damage = finalBossHp * 0.2f;
-                else if (attackSpeed >= 20 && attackSpeed < 30) damage = finalBossHp * 0.3f;
-                else if (attackSpeed >= 30) damage = finalBossHp * 0.5f;
-                else damage = 1;
-
-                StatModifier endModifier = player.GetTotalDamage(item.DamageType);
-                float endMultiplier = GetReforgeMultiplier(player, DamageMultiplierScale.NormalizeName(item.Name));
-                if(item.DamageType == DamageClass.Magic) {
-                    if(item.mana > 28) 
-                        return (int)Math.Round(endModifier.ApplyTo((damage*5)) * endMultiplier);
-                    else 
-                        return (int)Math.Round(endModifier.ApplyTo(damage) * endMultiplier);
-                }
-                return (int)Math.Round(endModifier.ApplyTo(damage) * endMultiplier);
+                // We add the difference to replace the vanilla base damage with our scaled damage.
+                // tModLoader will then safely apply ammo damage and armor multipliers on top of this!
+                damage.Base += (scaledBaseDamage - item.damage);
             }
-
-            int baseDamage = ContentSamples.ItemsByType.TryGetValue(item.type, out Item defaultItem) ? defaultItem.damage : 1;
-            return baseDamage > 0 ? baseDamage : 1;
         }
 
-        public static int CalculateDamageByName(Player player, string item)
+        // Extracts the raw Boss HP scale so it can be used cleanly
+        public static float GetProgressionBaseDamage(Player player, Item weapon)
         {
-            Item weapon = new Item();
-            var modPlayer = player.GetModPlayer<MyModPlayer>(); 
-            Dictionary<string, int> weaponName = modPlayer.weaponName;
-
-            if (weaponName.TryGetValue(item, out int id))
-            {
-                weapon.SetDefaults(id);
-            }
-
             int attackSpeed = weapon.useTime;
             float damage;
             var bossList = BossDefeated.OrderedBosses;
 
+            float highestHP = 0;
+            bool allDefeated = true;
+
             foreach (var boss in bossList)
             {
+                int primaryNpcId = boss.NpcIDs.First();
+                float bossHP = DamageMultiplierScale.GetBossScaleHP(primaryNpcId);
+                
+                if (bossHP > highestHP) highestHP = bossHP;
+
                 if (!boss.IsDowned.Invoke())
                 {
-                    int primaryNpcId = boss.NpcIDs.First();
-                    float bossHP = DamageMultiplierScale.GetBossScaleHP(primaryNpcId);
-                    
-                    if (attackSpeed < 10) damage = bossHP * 0.001f;
-                    else if (attackSpeed >= 10 && attackSpeed < 20) damage = bossHP * 0.002f;
-                    else if (attackSpeed >= 20 && attackSpeed < 30) damage = bossHP * 0.003f;
-                    else if (attackSpeed >= 30) damage = bossHP * 0.004f;
-                    else damage = 1;
-
-                    StatModifier modifier = player.GetTotalDamage(weapon.DamageType);
-                    float multiplier = GetReforgeMultiplier(player, item);
-                    if(weapon.DamageType == DamageClass.Magic) {
-                        if(weapon.mana > 28) 
-                            return (int)Math.Round(modifier.ApplyTo((damage*5)) * multiplier);
-                        else 
-                            return (int)Math.Round(modifier.ApplyTo(damage) * multiplier);
-                    }
-                    return (int)Math.Round(modifier.ApplyTo(damage) * multiplier);
+                    allDefeated = false;
+                    break; 
                 }
             }
 
-            if (bossList.Count > 0)
+            if (highestHP <= 0)
             {
-                int finalBossId = bossList.Last().NpcIDs.First();
-                float finalBossHp = DamageMultiplierScale.GetBossScaleHP(finalBossId);
-                
-                if (attackSpeed < 10) damage = finalBossHp * 0.05f;
-                else if (attackSpeed >= 10 && attackSpeed < 20) damage = finalBossHp * 0.2f;
-                else if (attackSpeed >= 20 && attackSpeed < 30) damage = finalBossHp * 0.3f;
-                else if (attackSpeed >= 30) damage = finalBossHp * 0.5f;
-                else damage = 1;
-
-                StatModifier endModifier = player.GetTotalDamage(weapon.DamageType);
-                float endMultiplier = GetReforgeMultiplier(player, item);
-                if(weapon.DamageType == DamageClass.Magic) {
-                    if(weapon.mana > 28) 
-                        return (int)Math.Round(endModifier.ApplyTo((damage*5)) * endMultiplier);
-                    else 
-                        return (int)Math.Round(endModifier.ApplyTo(damage) * endMultiplier);
-                }
-                return (int)Math.Round(endModifier.ApplyTo(damage) * endMultiplier);
+                int baseDamage = ContentSamples.ItemsByType.TryGetValue(weapon.type, out Item defaultWeapon) ? defaultWeapon.damage : weapon.damage;
+                return baseDamage > 0 ? baseDamage : 1;
             }
+
+            if (!allDefeated)
+            {
+                if (attackSpeed < 10) damage = highestHP * 0.001f;
+                else if (attackSpeed >= 10 && attackSpeed < 20) damage = highestHP * 0.002f;
+                else if (attackSpeed >= 20 && attackSpeed < 30) damage = highestHP * 0.003f;
+                else if (attackSpeed >= 30) damage = highestHP * 0.004f;
+                else damage = 1;
+            }
+            else
+            {
+                if (attackSpeed < 10) damage = highestHP * 0.05f;
+                else if (attackSpeed >= 10 && attackSpeed < 20) damage = highestHP * 0.2f;
+                else if (attackSpeed >= 20 && attackSpeed < 30) damage = highestHP * 0.3f;
+                else if (attackSpeed >= 30) damage = highestHP * 0.5f;
+                else damage = 1;
+            }
+
+            // Mage Fix: Apply magic multipliers safely
+            if (weapon.DamageType == DamageClass.Magic && weapon.mana > 28) 
+            {
+                damage *= 3f;
+            }
+
+            // Apply Reforge Modifier
+            float multiplier = GetReforgeMultiplier(player, DamageMultiplierScale.NormalizeName(weapon.Name));
+            damage *= multiplier;
+
+            return damage;
+        }
+
+        // For Minions and UI that need the final absolute number
+        public static int CalculateTotalDamage(Player player, Item item)
+        {
+            float baseDamage = GetProgressionBaseDamage(player, item);
+            StatModifier modifier = player.GetTotalDamage(item.DamageType);
+            return (int)Math.Round(modifier.ApplyTo(baseDamage));
+        }
+
+        public static int CalculateTotalDamageByName(Player player, string itemName)
+        {
+            Item weapon = new Item();
+            var modPlayer = player.GetModPlayer<MyModPlayer>(); 
             
-            int baseDamage = ContentSamples.ItemsByType.TryGetValue(weapon.type, out Item defaultWeapon) ? defaultWeapon.damage : 1;
-            return baseDamage > 0 ? baseDamage : 1;
+            if (modPlayer.weaponName.TryGetValue(itemName, out int id))
+            {
+                weapon.SetDefaults(id);
+            }
+            else return 1;
+
+            float baseDamage = GetProgressionBaseDamage(player, weapon);
+            StatModifier modifier = player.GetTotalDamage(weapon.DamageType);
+            
+            return (int)Math.Round(modifier.ApplyTo(baseDamage));
         }
     }
 }

@@ -2,8 +2,8 @@ using Terraria;
 using Terraria.ModLoader;
 using Microsoft.Xna.Framework;
 using System.Linq;
-using Terraria.ID;
 using System.Collections.Generic;
+using Terraria.ID;
 
 namespace DamageMultiplier.PlayerFile
 {
@@ -11,7 +11,7 @@ namespace DamageMultiplier.PlayerFile
     {
         public override CommandType Type => CommandType.Chat;
         public override string Command => "weapon";
-        public override string Description => "Add, remove, or list weapons for damage scaling.";
+        public override string Description => "Add, remove, or list weapons via chat, or use /scaler for the UI.";
         
         bool IsValidWeapon(string input)
         {
@@ -40,7 +40,7 @@ namespace DamageMultiplier.PlayerFile
 
             if (args.Length == 0)
             {
-                caller.Reply("Usage: /weapon <name> | /weapon remove <name> | /weapon list", Color.Red);
+                caller.Reply("Usage: /weapon <name> | /weapon remove <name> | /weapon list  (or type /scaler for UI)", Color.Red);
                 return;
             }
 
@@ -101,7 +101,8 @@ namespace DamageMultiplier.PlayerFile
                             {
                                 Item weapon = new Item();
                                 weapon.SetDefaults(items.Key);
-                                int damage = MyGlobalItem.CalculateDamage(player, items.Value);
+                                // NEW NAMING CONVENTION HERE
+                                int damage = MyGlobalItem.CalculateTotalDamage(player, items.Value);
                                 modPlayer.ItemWithDamage.Add(items.Key, damage);
                                 modPlayer.weaponName.Add(weapons, items.Key);
                                 weapon.damage = damage;

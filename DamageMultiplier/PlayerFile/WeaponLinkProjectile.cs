@@ -3,15 +3,12 @@ using Terraria.ModLoader;
 using Terraria.DataStructures;
 using System.Linq;
 using System.Collections.Generic;
-using Terraria.ID;
-using System;
 
 namespace DamageMultiplier.PlayerFile
 {
     public class WeaponLinkedProjectile : GlobalProjectile
     {
         public string linkedWeaponName = null;
-        private bool hasAppliedScaling = false;
 
         public override bool InstancePerEntity => true;
 
@@ -20,38 +17,37 @@ namespace DamageMultiplier.PlayerFile
             if (projectile.owner < 0 || projectile.owner >= Main.maxPlayers || projectile.hostile)
                 return;
 
-            var mainPlayer = Main.player[projectile.owner];
-            var player = mainPlayer.GetModPlayer<MyModPlayer>();
-            var visited = new HashSet<int>();
-
-            linkedWeaponName = GetWeaponNameFromSource(source, visited);
-
-            if (!string.IsNullOrEmpty(linkedWeaponName) &&
-                player.playerWeapons.Any(w => DamageMultiplierScale.NormalizeName(w) == linkedWeaponName))
+            // RESTRICTION: Only manually override Summoner minions/sentries! 
+            // Ranged bullets and Mage bolts scale natively now.
+            if (projectile.minion || projectile.sentry || projectile.DamageType == DamageClass.Summon || projectile.DamageType.CountsAsClass(DamageClass.Summon))
             {
-                int projectileDamage = MyGlobalItem.CalculateDamageByName(mainPlayer, linkedWeaponName);
-                projectile.damage = projectileDamage;
-                projectile.originalDamage = projectileDamage;
-            }
+                var mainPlayer = Main.player[projectile.owner];
+                var visited = new HashSet<int>();
 
-            if (projectile.minion || projectile.sentry)
-            {
-                ApplyMinionScaling(mainPlayer, projectile);
-                hasAppliedScaling = true;
+                linkedWeaponName = GetWeaponNameFromSource(source, visited);
+
+                if (string.IsNullOrEmpty(linkedWeaponName) && mainPlayer.HeldItem != null && mainPlayer.HeldItem.damage > 0)
+                {
+                    linkedWeaponName = DamageMultiplierScale.NormalizeName(mainPlayer.HeldItem.Name);
+                }
+
+                ApplyDamageOverride(mainPlayer, projectile);
             }
         }
 
         public override void AI(Projectile projectile)
         {
-            if ((projectile.minion || projectile.sentry) && !hasAppliedScaling)
+            if (projectile.minion || projectile.sentry || projectile.DamageType == DamageClass.Summon || projectile.DamageType.CountsAsClass(DamageClass.Summon))
             {
-                var mainPlayer = Main.player[projectile.owner];
-                ApplyMinionScaling(mainPlayer, projectile);
-                hasAppliedScaling = true;
+                if (projectile.owner >= 0 && projectile.owner < Main.maxPlayers)
+                {
+                    var mainPlayer = Main.player[projectile.owner];
+                    ApplyDamageOverride(mainPlayer, projectile);
+                }
             }
         }
 
-        private void ApplyMinionScaling(Player player, Projectile projectile)
+        private void ApplyDamageOverride(Player player, Projectile projectile)
         {
             if (string.IsNullOrEmpty(linkedWeaponName))
             {
@@ -64,19 +60,23 @@ namespace DamageMultiplier.PlayerFile
 
             if (string.IsNullOrEmpty(linkedWeaponName))
             {
-                ModContent.GetInstance<DamageMultiplier>().Logger.Warn($"[DamageMultiplier] ⚠ Could not determine linked weapon for minion {projectile.Name}.");
                 return;
             }
 
-            try
+            var modPlayer = player.GetModPlayer<MyModPlayer>();
+            if (modPlayer.playerWeapons.Contains(linkedWeaponName))
             {
-                int scaledDamage = MyGlobalItem.CalculateDamageByName(player, linkedWeaponName);
-                projectile.damage = scaledDamage;
-                projectile.originalDamage = scaledDamage;
-            }
-            catch (System.Exception ex)
-            {
-                Mod.Logger.Warn($"Damage is not scaling: {ex.Message}");
+                try
+                {
+                    // Use the new naming convention
+                    int scaledDamage = MyGlobalItem.CalculateTotalDamageByName(player, linkedWeaponName);
+                    projectile.damage = scaledDamage;
+                    projectile.originalDamage = scaledDamage;
+                }
+                catch (System.Exception ex)
+                {
+                    Mod.Logger.Warn($"Damage is not scaling: {ex.Message}");
+                }
             }
         }
 
@@ -98,7 +98,7 @@ namespace DamageMultiplier.PlayerFile
                     return GetWeaponNameFromSource(parentProj.GetSource_FromThis(), visited);
 
                 case EntitySource_Misc miscSource:
-                    if (miscSource.Context == "Summon" || miscSource.Context == "MagicItem" || miscSource.Context == "PlayerAction")
+                    if (miscSource.Context == "Summon" || miscSource.Context == "MagicItem" || miscSource.Context == "PlayerAction" || miscSource.Context == "Minion")
                     {
                         if (Main.player.Any(p => p.active))
                         {

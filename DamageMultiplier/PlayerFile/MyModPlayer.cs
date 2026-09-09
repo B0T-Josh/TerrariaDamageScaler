@@ -26,7 +26,6 @@ namespace DamageMultiplier.PlayerFile
 
         public override void OnEnterWorld()
         {
-            // FIX: Don't execute local UI / text routines if running on a dedicated server
             if (Main.netMode == NetmodeID.Server)
                 return;
 
@@ -41,7 +40,8 @@ namespace DamageMultiplier.PlayerFile
                     {
                         if (DamageMultiplierScale.NormalizeName(items.Value.Name) == weapons)
                         {
-                            int damage = MyGlobalItem.CalculateDamage(player, items.Value);
+                            // NEW NAMING CONVENTION HERE
+                            int damage = MyGlobalItem.CalculateTotalDamage(player, items.Value);
                             ItemWithDamage[items.Key] = damage;
                             weaponName[DamageMultiplierScale.NormalizeName(items.Value.Name)] = items.Key;
                         }
