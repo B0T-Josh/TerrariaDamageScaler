@@ -17,8 +17,6 @@ namespace DamageMultiplier.PlayerFile
             if (projectile.owner < 0 || projectile.owner >= Main.maxPlayers || projectile.hostile)
                 return;
 
-            // RESTRICTION: Only manually override Summoner minions/sentries! 
-            // Ranged bullets and Mage bolts scale natively now.
             if (projectile.minion || projectile.sentry || projectile.DamageType == DamageClass.Summon || projectile.DamageType.CountsAsClass(DamageClass.Summon))
             {
                 var mainPlayer = Main.player[projectile.owner];
@@ -68,10 +66,13 @@ namespace DamageMultiplier.PlayerFile
             {
                 try
                 {
-                    // Use the new naming convention
                     int scaledDamage = MyGlobalItem.CalculateTotalDamageByName(player, linkedWeaponName);
-                    projectile.damage = scaledDamage;
-                    projectile.originalDamage = scaledDamage;
+                    // SAFEGUARD: Only overwrite damage if a valid damage > 1 was calculated
+                    if (scaledDamage > 1)
+                    {
+                        projectile.damage = scaledDamage;
+                        projectile.originalDamage = scaledDamage;
+                    }
                 }
                 catch (System.Exception ex)
                 {

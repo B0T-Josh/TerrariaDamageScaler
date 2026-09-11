@@ -54,7 +54,6 @@ namespace DamageMultiplier.PlayerFile
                 : 1f;
         }
 
-        // NEW: This natively scales the weapon's true combat damage (including tooltips automatically)
         public override void ModifyWeaponDamage(Item item, Player player, ref StatModifier damage)
         {
             var modPlayer = player.GetModPlayer<MyModPlayer>();
@@ -63,14 +62,10 @@ namespace DamageMultiplier.PlayerFile
             if (modPlayer.playerWeapons.Contains(normalizedName))
             {
                 float scaledBaseDamage = GetProgressionBaseDamage(player, item);
-                
-                // We add the difference to replace the vanilla base damage with our scaled damage.
-                // tModLoader will then safely apply ammo damage and armor multipliers on top of this!
                 damage.Base += (scaledBaseDamage - item.damage);
             }
         }
 
-        // Extracts the raw Boss HP scale so it can be used cleanly
         public static float GetProgressionBaseDamage(Player player, Item weapon)
         {
             int attackSpeed = weapon.useTime;
@@ -117,20 +112,17 @@ namespace DamageMultiplier.PlayerFile
                 else damage = 1;
             }
 
-            // Mage Fix: Apply magic multipliers safely
             if (weapon.DamageType == DamageClass.Magic && weapon.mana > 28) 
             {
                 damage *= 3f;
             }
 
-            // Apply Reforge Modifier
             float multiplier = GetReforgeMultiplier(player, DamageMultiplierScale.NormalizeName(weapon.Name));
             damage *= multiplier;
 
             return damage;
         }
 
-        // For Minions and UI that need the final absolute number
         public static int CalculateTotalDamage(Player player, Item item)
         {
             float baseDamage = GetProgressionBaseDamage(player, item);
@@ -138,16 +130,22 @@ namespace DamageMultiplier.PlayerFile
             return (int)Math.Round(modifier.ApplyTo(baseDamage));
         }
 
+        // FIX: Directly searches ContentSamples.ItemsByType instead of relying on fragile weaponName dictionary
         public static int CalculateTotalDamageByName(Player player, string itemName)
         {
-            Item weapon = new Item();
-            var modPlayer = player.GetModPlayer<MyModPlayer>(); 
+            Item weapon = null;
             
-            if (modPlayer.weaponName.TryGetValue(itemName, out int id))
+            foreach (var pair in ContentSamples.ItemsByType)
             {
-                weapon.SetDefaults(id);
+                if (DamageMultiplierScale.NormalizeName(pair.Value.Name) == itemName)
+                {
+                    weapon = pair.Value;
+                    break;
+                }
             }
-            else return 1;
+
+            if (weapon == null || weapon.IsAir) 
+                return 1;
 
             float baseDamage = GetProgressionBaseDamage(player, weapon);
             StatModifier modifier = player.GetTotalDamage(weapon.DamageType);
