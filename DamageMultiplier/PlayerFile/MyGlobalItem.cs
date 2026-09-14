@@ -12,6 +12,25 @@ namespace DamageMultiplier.PlayerFile
         public override bool InstancePerEntity => true;
         private int lastSeenPrefix = -1;
 
+        // Cached lookup map: NormalizedName -> ItemID
+        public static Dictionary<string, int> ItemNameToIdMap = new Dictionary<string, int>();
+
+        public override void Load()
+        {
+            ItemNameToIdMap.Clear();
+            foreach (var pair in ContentSamples.ItemsByType)
+            {
+                if (!pair.Value.IsAir && !string.IsNullOrEmpty(pair.Value.Name))
+                {
+                    string norm = DamageMultiplierScale.NormalizeName(pair.Value.Name);
+                    if (!ItemNameToIdMap.ContainsKey(norm))
+                    {
+                        ItemNameToIdMap[norm] = pair.Key;
+                    }
+                }
+            }
+        }
+
         public override void UpdateInventory(Item item, Player player)
         {
             TryCaptureReforgeMultiplier(item, player);
@@ -71,14 +90,14 @@ namespace DamageMultiplier.PlayerFile
             int attackSpeed = weapon.useTime;
             float damage;
             var bossList = BossDefeated.OrderedBosses;
+            var config = ModContent.GetInstance<DamageMultiplierConfig>();
 
             float highestHP = 0;
             bool allDefeated = true;
 
             foreach (var boss in bossList)
             {
-                int primaryNpcId = boss.NpcIDs.First();
-                float bossHP = DamageMultiplierScale.GetBossScaleHP(primaryNpcId);
+                float bossHP = boss.MaxHP; // Instant cached lookup
                 
                 if (bossHP > highestHP) highestHP = bossHP;
 
@@ -97,24 +116,24 @@ namespace DamageMultiplier.PlayerFile
 
             if (!allDefeated)
             {
-                if (attackSpeed < 10) damage = highestHP * 0.001f;
-                else if (attackSpeed >= 10 && attackSpeed < 20) damage = highestHP * 0.002f;
-                else if (attackSpeed >= 20 && attackSpeed < 30) damage = highestHP * 0.003f;
-                else if (attackSpeed >= 30) damage = highestHP * 0.004f;
+                if (attackSpeed <= 8) damage = highestHP * config.ProgSpeed1;
+                else if (attackSpeed >= 9 && attackSpeed <= 25) damage = highestHP * config.ProgSpeed2;
+                else if (attackSpeed >= 26 && attackSpeed <= 35) damage = highestHP * config.ProgSpeed3;
+                else if (attackSpeed >= 36) damage = highestHP * config.ProgSpeed4;
                 else damage = 1;
             }
             else
             {
-                if (attackSpeed < 10) damage = highestHP * 0.05f;
-                else if (attackSpeed >= 10 && attackSpeed < 20) damage = highestHP * 0.2f;
-                else if (attackSpeed >= 20 && attackSpeed < 30) damage = highestHP * 0.3f;
-                else if (attackSpeed >= 30) damage = highestHP * 0.5f;
+                if (attackSpeed <= 8) damage = highestHP * config.PostSpeed1;
+                else if (attackSpeed >= 9 && attackSpeed <= 25) damage = highestHP * config.PostSpeed2;
+                else if (attackSpeed >= 26 && attackSpeed <= 35) damage = highestHP * config.PostSpeed3;
+                else if (attackSpeed >= 36) damage = highestHP * config.PostSpeed4;
                 else damage = 1;
             }
 
             if (weapon.DamageType == DamageClass.Magic && weapon.mana > 28) 
             {
-                damage *= 3f;
+                damage *= config.MagicMultiplier;
             }
 
             float multiplier = GetReforgeMultiplier(player, DamageMultiplierScale.NormalizeName(weapon.Name));
@@ -130,20 +149,13 @@ namespace DamageMultiplier.PlayerFile
             return (int)Math.Round(modifier.ApplyTo(baseDamage));
         }
 
-        // FIX: Directly searches ContentSamples.ItemsByType instead of relying on fragile weaponName dictionary
+        // Instant O(1) Dictionary Lookup
         public static int CalculateTotalDamageByName(Player player, string itemName)
         {
-            Item weapon = null;
-            
-            foreach (var pair in ContentSamples.ItemsByType)
-            {
-                if (DamageMultiplierScale.NormalizeName(pair.Value.Name) == itemName)
-                {
-                    weapon = pair.Value;
-                    break;
-                }
-            }
+            if (!ItemNameToIdMap.TryGetValue(itemName, out int itemId))
+                return 1;
 
+            Item weapon = ContentSamples.ItemsByType[itemId];
             if (weapon == null || weapon.IsAir) 
                 return 1;
 

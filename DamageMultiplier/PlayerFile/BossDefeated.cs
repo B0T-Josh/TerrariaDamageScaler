@@ -17,6 +17,7 @@ namespace DamageMultiplier.PlayerFile
             public float Progression;
             public List<int> NpcIDs;
             public Func<bool> IsDowned;
+            public int MaxHP; // Cached HP
         }
 
         public override void PostAddRecipes()
@@ -31,42 +32,37 @@ namespace DamageMultiplier.PlayerFile
                 {
                     foreach (var entry in bossInfoDict)
                     {
-                        // --- NEW FILTER: Ignore all bosses from The Stars Above ---
                         if (entry.Key.StartsWith("StarsAbove", StringComparison.OrdinalIgnoreCase))
-                        {
-                            continue; // Skips this boss and moves to the next one in the loop
-                        }
+                            continue;
 
                         var data = entry.Value;
-                        
-                        // Extract the data fields
                         float prog = data.ContainsKey("progression") ? Convert.ToSingle(data["progression"]) : 0f;
                         List<int> npcIds = data.ContainsKey("npcIDs") ? (data["npcIDs"] as List<int>) : new List<int>();
                         Func<bool> downed = data.ContainsKey("downed") ? (data["downed"] as Func<bool>) : () => false;
-                        
-                        // Check if Boss Checklist considers this a main boss
                         bool isBoss = data.ContainsKey("isBoss") ? Convert.ToBoolean(data["isBoss"]) : false;
 
-                        // Only add to our list if it is a main boss AND has an NPC ID
                         if (isBoss && npcIds != null && npcIds.Count > 0)
                         {
+                            // Fetch HP ONCE during loading
+                            NPC tempNpc = new NPC();
+                            tempNpc.SetDefaults(npcIds.First());
+
                             OrderedBosses.Add(new BossData
                             {
                                 InternalName = entry.Key,
                                 Progression = prog,
                                 NpcIDs = npcIds,
-                                IsDowned = downed
+                                IsDowned = downed,
+                                MaxHP = tempNpc.lifeMax
                             });
                         }
                     }
                     
                     OrderedBosses = OrderedBosses.OrderBy(b => b.Progression).ToList();
-                    Mod.Logger.Info($"[DamageMultiplier] Loaded {OrderedBosses.Count} MAIN bosses from Boss Checklist (Stars Above ignored)!");
                     return; 
                 }
             }
 
-            Mod.Logger.Warn("[DamageMultiplier] Boss Checklist not found. Falling back to Vanilla bosses only.");
             LoadVanillaFallback();
         }
 
@@ -91,12 +87,16 @@ namespace DamageMultiplier.PlayerFile
 
         private void AddVanillaBoss(string name, float prog, int npcId, Func<bool> downedFunc)
         {
+            NPC tempNpc = new NPC();
+            tempNpc.SetDefaults(npcId);
+
             OrderedBosses.Add(new BossData
             {
                 InternalName = name,
                 Progression = prog,
                 NpcIDs = new List<int> { npcId },
-                IsDowned = downedFunc
+                IsDowned = downedFunc,
+                MaxHP = tempNpc.lifeMax
             });
         }
     }

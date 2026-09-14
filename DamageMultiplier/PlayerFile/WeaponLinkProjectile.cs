@@ -9,6 +9,7 @@ namespace DamageMultiplier.PlayerFile
     public class WeaponLinkedProjectile : GlobalProjectile
     {
         public string linkedWeaponName = null;
+        private bool hasAppliedScaling = false;
 
         public override bool InstancePerEntity => true;
 
@@ -30,17 +31,20 @@ namespace DamageMultiplier.PlayerFile
                 }
 
                 ApplyDamageOverride(mainPlayer, projectile);
+                hasAppliedScaling = true;
             }
         }
 
         public override void AI(Projectile projectile)
         {
-            if (projectile.minion || projectile.sentry || projectile.DamageType == DamageClass.Summon || projectile.DamageType.CountsAsClass(DamageClass.Summon))
+            // Only runs ONCE per minion lifespan instead of every single tick frame
+            if (!hasAppliedScaling && (projectile.minion || projectile.sentry || projectile.DamageType == DamageClass.Summon || projectile.DamageType.CountsAsClass(DamageClass.Summon)))
             {
                 if (projectile.owner >= 0 && projectile.owner < Main.maxPlayers)
                 {
                     var mainPlayer = Main.player[projectile.owner];
                     ApplyDamageOverride(mainPlayer, projectile);
+                    hasAppliedScaling = true;
                 }
             }
         }
@@ -57,9 +61,7 @@ namespace DamageMultiplier.PlayerFile
             }
 
             if (string.IsNullOrEmpty(linkedWeaponName))
-            {
                 return;
-            }
 
             var modPlayer = player.GetModPlayer<MyModPlayer>();
             if (modPlayer.playerWeapons.Contains(linkedWeaponName))
@@ -67,7 +69,6 @@ namespace DamageMultiplier.PlayerFile
                 try
                 {
                     int scaledDamage = MyGlobalItem.CalculateTotalDamageByName(player, linkedWeaponName);
-                    // SAFEGUARD: Only overwrite damage if a valid damage > 1 was calculated
                     if (scaledDamage > 1)
                     {
                         projectile.damage = scaledDamage;
