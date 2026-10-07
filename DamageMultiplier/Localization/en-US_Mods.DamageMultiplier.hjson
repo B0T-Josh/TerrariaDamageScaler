@@ -1,98 +1,98 @@
-DamageClasses.ModifierInheritance.DisplayName: Modifier Inheritance
-
 Configs: {
 	DamageMultiplierConfig: {
-		ProgSpeed4: {
-			Tooltip: ""
-			Label: Use Time >= 30
-		}
-
-		ProgSpeed3: {
-			Tooltip: ""
-			Label: Use Time 20 - 29
-		}
-
-		ProgSpeed2: {
-			Tooltip: ""
-			Label: Use Time 10 - 19
-		}
-
-		ProgSpeed1: {
-			Tooltip: ""
-			Label: Use Time < 10
+		MagicMultiplier: {
+			Tooltip: The flat damage multiplier for magic weapons costing more than 28 mana.
+			Label: High-Mana Magic Multiplier
 		}
 
 		Headers: {
-			StandardProgression: Standard Progression Header
-			PostGameMultipliers: Post Game Multipliers Header
 			ClassAdjustments: Class Adjustments Header
+			PostGameMultipliers: Post Game Multipliers Header
+			StandardProgression: Standard Progression Header
 		}
 
-		DisplayName: Damage Multiplier Config
-
-		PostSpeed1: {
-			Label: Post-Game Use Time < 10
-			Tooltip: ""
+		PostSpeed8Int: {
+			Tooltip: Type a whole number. It automatically multiplies by 0.1 (e.g., 2 = 0.2)
+			Label: Use Time Snail
 		}
 
-		PostSpeed2: {
-			Label: Post-Game Use Time 10 - 19
-			Tooltip: ""
+		PostSpeed7Int: {
+			Tooltip: Type a whole number. It automatically multiplies by 0.1 (e.g., 2 = 0.2)
+			Label: Use Time Extremely Slow
 		}
 
-		PostSpeed3: {
-			Label: Post-Game Use Time 20 - 29
-			Tooltip: ""
+		PostSpeed6Int: {
+			Tooltip: Type a whole number. It automatically multiplies by 0.1 (e.g., 2 = 0.2)
+			Label: Use Time Very Slow
 		}
 
-		PostSpeed4: {
-			Label: Post-Game Use Time >= 30
-			Tooltip: ""
-		}
-
-		MagicMultiplier: {
-			Label: High-Mana Magic Multiplier
-			Tooltip: The extra damage multiplier for magic weapons costing more than 28 mana.
-		}
-
-		ProgSpeed1Int: {
-			Label: Use Time < 10
-			Tooltip: Type a whole number. It automatically multiplies by 0.001 (e.g., 2 = 0.002)
-		}
-
-		ProgSpeed2Int: {
-			Label: Use Time 10 - 19
-			Tooltip: ""
-		}
-
-		ProgSpeed3Int: {
-			Label: Use Time 20 - 29
-			Tooltip: ""
-		}
-
-		ProgSpeed4Int: {
-			Label: Use Time >= 30
-			Tooltip: ""
-		}
-
-		PostSpeed1Int: {
-			Label: Post-Game Use Time < 10
-			Tooltip: Type a whole number. It automatically multiplies by 0.001 (e.g., 100 = 0.1)
-		}
-
-		PostSpeed2Int: {
-			Label: Post-Game Use Time 10 - 19
-			Tooltip: ""
-		}
-
-		PostSpeed3Int: {
-			Label: Post-Game Use Time 20 - 29
-			Tooltip: ""
+		PostSpeed5Int: {
+			Tooltip: Type a whole number. It automatically multiplies by 0.1 (e.g., 2 = 0.2)
+			Label: Use Time Slow
 		}
 
 		PostSpeed4Int: {
-			Label: Post-Game Use Time >= 30
-			Tooltip: ""
+			Tooltip: Type a whole number. It automatically multiplies by 0.1 (e.g., 2 = 0.2)
+			Label: Use Time Average
 		}
+
+		PostSpeed3Int: {
+			Tooltip: Type a whole number. It automatically multiplies by 0.1 (e.g., 2 = 0.2)
+			Label: Use Time Fast
+		}
+
+		PostSpeed2Int: {
+			Tooltip: Type a whole number. It automatically multiplies by 0.1 (e.g., 2 = 0.2)
+			Label: Use Time Very Fast
+		}
+
+		PostSpeed1Int: {
+			Tooltip: Type a whole number. It automatically multiplies by 0.1 (e.g., 2 = 0.2)
+			Label: Use Time Insanely Fast
+		}
+
+		ProgSpeed8Int: {
+			Tooltip: Type a whole number. It automatically multiplies by 0.001 (e.g., 2 = 0.002)
+			Label: Use Time Snail
+		}
+
+		ProgSpeed7Int: {
+			Tooltip: Type a whole number. It automatically multiplies by 0.001 (e.g., 2 = 0.002)
+			Label: Use Time Extremely Slow
+		}
+
+		ProgSpeed6Int: {
+			Tooltip: Type a whole number. It automatically multiplies by 0.001 (e.g., 2 = 0.002)
+			Label: Use Time Very Slow
+		}
+
+		ProgSpeed5Int: {
+			Tooltip: Type a whole number. It automatically multiplies by 0.001 (e.g., 2 = 0.002)
+			Label: Use Time Slow
+		}
+
+		ProgSpeed4Int: {
+			Tooltip: Type a whole number. It automatically multiplies by 0.001 (e.g., 2 = 0.002)
+			Label: Use Time Average
+		}
+
+		ProgSpeed3Int: {
+			Tooltip: Type a whole number. It automatically multiplies by 0.001 (e.g., 2 = 0.002)
+			Label: Use Time Fast
+		}
+
+		ProgSpeed2Int: {
+			Tooltip: Type a whole number. It automatically multiplies by 0.001 (e.g., 2 = 0.002)
+			Label: Use Time Very Fast
+		}
+
+		ProgSpeed1Int: {
+			Tooltip: Type a whole number. It automatically multiplies by 0.001 (e.g., 2 = 0.002)
+			Label: Use Time Insanely Fast
+		}
+
+		DisplayName: Damage Multiplier Config
 	}
 }
+
+DamageClasses.ModifierInheritance.DisplayName: Modifier Inheritance

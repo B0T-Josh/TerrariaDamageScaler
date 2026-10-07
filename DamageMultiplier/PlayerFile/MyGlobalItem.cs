@@ -12,12 +12,14 @@ namespace DamageMultiplier.PlayerFile
         public override bool InstancePerEntity => true;
         private int lastSeenPrefix = -1;
 
-        // Cached lookup map: NormalizedName -> ItemID
         public static Dictionary<string, int> ItemNameToIdMap = new Dictionary<string, int>();
+        // NEW: Reverse lookup to track buff-spawned minions back to their original weapon
+        public static Dictionary<int, string> ProjectileToItemMap = new Dictionary<int, string>();
 
         public override void Load()
         {
             ItemNameToIdMap.Clear();
+            ProjectileToItemMap.Clear();
             foreach (var pair in ContentSamples.ItemsByType)
             {
                 if (!pair.Value.IsAir && !string.IsNullOrEmpty(pair.Value.Name))
@@ -26,6 +28,12 @@ namespace DamageMultiplier.PlayerFile
                     if (!ItemNameToIdMap.ContainsKey(norm))
                     {
                         ItemNameToIdMap[norm] = pair.Key;
+                    }
+                    
+                    // Maps the projectile ID back to the weapon name
+                    if (pair.Value.shoot > 0 && !ProjectileToItemMap.ContainsKey(pair.Value.shoot))
+                    {
+                        ProjectileToItemMap[pair.Value.shoot] = norm;
                     }
                 }
             }
@@ -97,7 +105,7 @@ namespace DamageMultiplier.PlayerFile
 
             foreach (var boss in bossList)
             {
-                float bossHP = boss.MaxHP; // Instant cached lookup
+                float bossHP = boss.MaxHP; 
                 
                 if (bossHP > highestHP) highestHP = bossHP;
 
@@ -117,17 +125,25 @@ namespace DamageMultiplier.PlayerFile
             if (!allDefeated)
             {
                 if (attackSpeed <= 8) damage = highestHP * config.ProgSpeed1;
-                else if (attackSpeed >= 9 && attackSpeed <= 25) damage = highestHP * config.ProgSpeed2;
-                else if (attackSpeed >= 26 && attackSpeed <= 35) damage = highestHP * config.ProgSpeed3;
-                else if (attackSpeed >= 36) damage = highestHP * config.ProgSpeed4;
+                else if (attackSpeed >= 9 && attackSpeed <= 20) damage = highestHP * config.ProgSpeed2;
+                else if (attackSpeed >= 21 && attackSpeed <= 25) damage = highestHP * config.ProgSpeed3;
+                else if (attackSpeed >= 26 && attackSpeed <= 30) damage = highestHP * config.ProgSpeed4;
+                else if (attackSpeed >= 31 && attackSpeed <= 35) damage = highestHP * config.ProgSpeed5;
+                else if (attackSpeed >= 36 && attackSpeed <= 45) damage = highestHP * config.ProgSpeed6;
+                else if (attackSpeed >= 46 && attackSpeed <= 55) damage = highestHP * config.ProgSpeed7;
+                else if (attackSpeed >= 56) damage = highestHP * config.ProgSpeed8;
                 else damage = 1;
             }
             else
             {
                 if (attackSpeed <= 8) damage = highestHP * config.PostSpeed1;
-                else if (attackSpeed >= 9 && attackSpeed <= 25) damage = highestHP * config.PostSpeed2;
-                else if (attackSpeed >= 26 && attackSpeed <= 35) damage = highestHP * config.PostSpeed3;
-                else if (attackSpeed >= 36) damage = highestHP * config.PostSpeed4;
+                else if (attackSpeed >= 9 && attackSpeed <= 20) damage = highestHP * config.PostSpeed2;
+                else if (attackSpeed >= 21 && attackSpeed <= 25) damage = highestHP * config.PostSpeed3;
+                else if (attackSpeed >= 26 && attackSpeed <= 30) damage = highestHP * config.PostSpeed4;
+                else if (attackSpeed >= 31 && attackSpeed <= 35) damage = highestHP * config.PostSpeed5;
+                else if (attackSpeed >= 36 && attackSpeed <= 45) damage = highestHP * config.PostSpeed6;
+                else if (attackSpeed >= 46 && attackSpeed <= 55) damage = highestHP * config.PostSpeed7;
+                else if (attackSpeed >= 56) damage = highestHP * config.PostSpeed8;
                 else damage = 1;
             }
 
@@ -149,7 +165,6 @@ namespace DamageMultiplier.PlayerFile
             return (int)Math.Round(modifier.ApplyTo(baseDamage));
         }
 
-        // Instant O(1) Dictionary Lookup
         public static int CalculateTotalDamageByName(Player player, string itemName)
         {
             if (!ItemNameToIdMap.TryGetValue(itemName, out int itemId))
@@ -163,6 +178,20 @@ namespace DamageMultiplier.PlayerFile
             StatModifier modifier = player.GetTotalDamage(weapon.DamageType);
             
             return (int)Math.Round(modifier.ApplyTo(baseDamage));
+        }
+
+        // NEW: Fetches purely the raw scaled damage so minions don't double-dip player stats
+        public static int CalculateMinionBaseDamageByName(Player player, string itemName)
+        {
+            if (!ItemNameToIdMap.TryGetValue(itemName, out int itemId))
+                return 1;
+
+            Item weapon = ContentSamples.ItemsByType[itemId];
+            if (weapon == null || weapon.IsAir) 
+                return 1;
+
+            float baseDamage = GetProgressionBaseDamage(player, weapon);
+            return (int)Math.Round(baseDamage);
         }
     }
 }

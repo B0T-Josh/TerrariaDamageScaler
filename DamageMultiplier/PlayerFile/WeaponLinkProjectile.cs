@@ -9,7 +9,6 @@ namespace DamageMultiplier.PlayerFile
     public class WeaponLinkedProjectile : GlobalProjectile
     {
         public string linkedWeaponName = null;
-        private bool hasAppliedScaling = false;
 
         public override bool InstancePerEntity => true;
 
@@ -25,38 +24,50 @@ namespace DamageMultiplier.PlayerFile
 
                 linkedWeaponName = GetWeaponNameFromSource(source, visited);
 
+                // If a Buff spawned the minion, trace its Projectile ID directly to the Weapon
+                if (string.IsNullOrEmpty(linkedWeaponName))
+                {
+                    if (MyGlobalItem.ProjectileToItemMap.TryGetValue(projectile.type, out string mappedName))
+                    {
+                        linkedWeaponName = mappedName;
+                    }
+                }
+
                 if (string.IsNullOrEmpty(linkedWeaponName) && mainPlayer.HeldItem != null && mainPlayer.HeldItem.damage > 0)
                 {
                     linkedWeaponName = DamageMultiplierScale.NormalizeName(mainPlayer.HeldItem.Name);
                 }
-
-                ApplyDamageOverride(mainPlayer, projectile);
-                hasAppliedScaling = true;
             }
         }
 
-        public override void AI(Projectile projectile)
+        // CRITICAL FIX: Changed from AI() to PreAI() and removed the one-time stop switch.
+        // This forces the scaled damage to apply every frame BEFORE Terraria calculates armor stats.
+        public override bool PreAI(Projectile projectile)
         {
-            // Only runs ONCE per minion lifespan instead of every single tick frame
-            if (!hasAppliedScaling && (projectile.minion || projectile.sentry || projectile.DamageType == DamageClass.Summon || projectile.DamageType.CountsAsClass(DamageClass.Summon)))
+            if (projectile.minion || projectile.sentry || projectile.DamageType == DamageClass.Summon || projectile.DamageType.CountsAsClass(DamageClass.Summon))
             {
                 if (projectile.owner >= 0 && projectile.owner < Main.maxPlayers)
                 {
                     var mainPlayer = Main.player[projectile.owner];
                     ApplyDamageOverride(mainPlayer, projectile);
-                    hasAppliedScaling = true;
                 }
             }
+            
+            return true; // Return true to let vanilla AI continue running
         }
 
         private void ApplyDamageOverride(Player player, Projectile projectile)
         {
+            // Safety net in case OnSpawn missed the weapon name
             if (string.IsNullOrEmpty(linkedWeaponName))
             {
-                var heldItem = player.HeldItem;
-                if (heldItem != null && !string.IsNullOrEmpty(heldItem.Name))
+                if (MyGlobalItem.ProjectileToItemMap.TryGetValue(projectile.type, out string mappedName))
                 {
-                    linkedWeaponName = DamageMultiplierScale.NormalizeName(heldItem.Name);
+                    linkedWeaponName = mappedName;
+                }
+                else if (player.HeldItem != null && !string.IsNullOrEmpty(player.HeldItem.Name))
+                {
+                    linkedWeaponName = DamageMultiplierScale.NormalizeName(player.HeldItem.Name);
                 }
             }
 
@@ -68,10 +79,12 @@ namespace DamageMultiplier.PlayerFile
             {
                 try
                 {
-                    int scaledDamage = MyGlobalItem.CalculateTotalDamageByName(player, linkedWeaponName);
+                    int scaledDamage = MyGlobalItem.CalculateMinionBaseDamageByName(player, linkedWeaponName);
+                    
                     if (scaledDamage > 1)
                     {
-                        projectile.damage = scaledDamage;
+                        // We ONLY set originalDamage. Terraria's vanilla AI will automatically 
+                        // read this and dynamically calculate projectile.damage using your armor stats!
                         projectile.originalDamage = scaledDamage;
                     }
                 }
