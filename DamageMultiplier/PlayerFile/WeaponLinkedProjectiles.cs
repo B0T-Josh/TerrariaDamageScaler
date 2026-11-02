@@ -58,7 +58,6 @@ namespace DamageMultiplier.PlayerFile
 
         private void ApplyDamageOverride(Player player, Projectile projectile)
         {
-            // Safety net in case OnSpawn missed the weapon name
             if (string.IsNullOrEmpty(linkedWeaponName))
             {
                 if (MyGlobalItem.ProjectileToItemMap.TryGetValue(projectile.type, out string mappedName))
@@ -75,7 +74,8 @@ namespace DamageMultiplier.PlayerFile
                 return;
 
             var modPlayer = player.GetModPlayer<MyModPlayer>();
-            if (modPlayer.playerWeapons.Contains(linkedWeaponName))
+            
+            if (modPlayer.WeaponConfigs.TryGetValue(linkedWeaponName, out WeaponScaleData config) && config.IsEnabled)
             {
                 try
                 {
@@ -83,8 +83,6 @@ namespace DamageMultiplier.PlayerFile
                     
                     if (scaledDamage > 1)
                     {
-                        // We ONLY set originalDamage. Terraria's vanilla AI will automatically 
-                        // read this and dynamically calculate projectile.damage using your armor stats!
                         projectile.originalDamage = scaledDamage;
                     }
                 }
