@@ -15,28 +15,7 @@ namespace DamageMultiplier.PlayerFile
         // Reverse lookup to track buff-spawned minions back to their original weapon
         public static Dictionary<int, string> ProjectileToItemMap = new Dictionary<int, string>();
 
-        public override void Load()
-        {
-            ItemNameToIdMap.Clear();
-            ProjectileToItemMap.Clear();
-            foreach (var pair in ContentSamples.ItemsByType)
-            {
-                if (!pair.Value.IsAir && !string.IsNullOrEmpty(pair.Value.Name))
-                {
-                    string norm = DamageMultiplierScale.NormalizeName(pair.Value.Name);
-                    if (!ItemNameToIdMap.ContainsKey(norm))
-                    {
-                        ItemNameToIdMap[norm] = pair.Key;
-                    }
-                    
-                    // Maps the projectile ID back to the weapon name
-                    if (pair.Value.shoot > 0 && !ProjectileToItemMap.ContainsKey(pair.Value.shoot))
-                    {
-                        ProjectileToItemMap[pair.Value.shoot] = norm;
-                    }
-                }
-            }
-        }
+        // Notice that public override void Load() has been deleted from here.
 
         public override void UpdateInventory(Item item, Player player)
         {
@@ -113,16 +92,13 @@ namespace DamageMultiplier.PlayerFile
                     }
                 }
 
-                // FIX: If no bosses are defeated, use the Max HP of the first boss in the progression list.
                 if (highestHP == 0 && BossDefeated.OrderedBosses.Count > 0)
                 {
                     highestHP = BossDefeated.OrderedBosses[0].MaxHP;
                 }
                 
-                // Calculate scaled damage using the boss HP
                 float damage = (highestHP * 0.001f) * config.DamageScale;
 
-                // Apply magic & reforge multipliers (config removed, using hardcoded 2x)
                 if (weapon.DamageType == DamageClass.Magic && weapon.mana > 28)
                 {
                     damage *= 2f;
@@ -132,7 +108,6 @@ namespace DamageMultiplier.PlayerFile
                 return damage;
             }
 
-            // Default return if weapon is not in the scaling system at all
             return weapon.damage > 0 ? weapon.damage : 1;
         }
 
@@ -158,7 +133,6 @@ namespace DamageMultiplier.PlayerFile
             return (int)Math.Round(modifier.ApplyTo(baseDamage));
         }
 
-        // Fetches purely the raw scaled damage so minions don't double-dip player stats
         public static int CalculateMinionBaseDamageByName(Player player, string itemName)
         {
             if (!ItemNameToIdMap.TryGetValue(itemName, out int itemId))

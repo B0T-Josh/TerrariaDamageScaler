@@ -24,24 +24,28 @@ namespace DamageMultiplier.PlayerFile
 
                 linkedWeaponName = GetWeaponNameFromSource(source, visited);
 
-                // If a Buff spawned the minion, trace its Projectile ID directly to the Weapon
-                if (string.IsNullOrEmpty(linkedWeaponName))
+                // NEW: Dynamic Mapping. If we successfully traced this projectile to a weapon, 
+                // cache it in the dictionary immediately so sub-projectiles (like minion lasers) can inherit it!
+                if (!string.IsNullOrEmpty(linkedWeaponName))
+                {
+                    MyGlobalItem.ProjectileToItemMap[projectile.type] = linkedWeaponName;
+                }
+                else
                 {
                     if (MyGlobalItem.ProjectileToItemMap.TryGetValue(projectile.type, out string mappedName))
                     {
                         linkedWeaponName = mappedName;
                     }
-                }
-
-                if (string.IsNullOrEmpty(linkedWeaponName) && mainPlayer.HeldItem != null && mainPlayer.HeldItem.damage > 0)
-                {
-                    linkedWeaponName = DamageMultiplierScale.NormalizeName(mainPlayer.HeldItem.Name);
+                    else if (mainPlayer.HeldItem != null && mainPlayer.HeldItem.damage > 0)
+                    {
+                        // Final fallback: assume the item the player is actively holding spawned this.
+                        linkedWeaponName = DamageMultiplierScale.NormalizeName(mainPlayer.HeldItem.Name);
+                        MyGlobalItem.ProjectileToItemMap[projectile.type] = linkedWeaponName; 
+                    }
                 }
             }
         }
 
-        // CRITICAL FIX: Changed from AI() to PreAI() and removed the one-time stop switch.
-        // This forces the scaled damage to apply every frame BEFORE Terraria calculates armor stats.
         public override bool PreAI(Projectile projectile)
         {
             if (projectile.minion || projectile.sentry || projectile.DamageType == DamageClass.Summon || projectile.DamageType.CountsAsClass(DamageClass.Summon))
@@ -53,7 +57,7 @@ namespace DamageMultiplier.PlayerFile
                 }
             }
             
-            return true; // Return true to let vanilla AI continue running
+            return true; // Return true to let vanilla/mod AI continue running
         }
 
         private void ApplyDamageOverride(Player player, Projectile projectile)
@@ -63,10 +67,6 @@ namespace DamageMultiplier.PlayerFile
                 if (MyGlobalItem.ProjectileToItemMap.TryGetValue(projectile.type, out string mappedName))
                 {
                     linkedWeaponName = mappedName;
-                }
-                else if (player.HeldItem != null && !string.IsNullOrEmpty(player.HeldItem.Name))
-                {
-                    linkedWeaponName = DamageMultiplierScale.NormalizeName(player.HeldItem.Name);
                 }
             }
 
@@ -79,11 +79,16 @@ namespace DamageMultiplier.PlayerFile
             {
                 try
                 {
-                    int scaledDamage = MyGlobalItem.CalculateMinionBaseDamageByName(player, linkedWeaponName);
+                    // FIX: We calculate the absolute final damage (including player stat buffs)
+                    int totalScaledDamage = MyGlobalItem.CalculateTotalDamageByName(player, linkedWeaponName);
+                    int baseScaledDamage = MyGlobalItem.CalculateMinionBaseDamageByName(player, linkedWeaponName);
                     
-                    if (scaledDamage > 1)
+                    if (totalScaledDamage > 0)
                     {
-                        projectile.originalDamage = scaledDamage;
+                        // By forcing projectile.damage directly, we guarantee the exact damage is dealt 
+                        // even if the mod ignores vanilla minion flags.
+                        projectile.originalDamage = baseScaledDamage;
+                        projectile.damage = totalScaledDamage;
                     }
                 }
                 catch (System.Exception ex)
