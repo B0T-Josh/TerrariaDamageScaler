@@ -17,7 +17,8 @@ namespace DamageMultiplier.PlayerFile
             public float Progression;
             public List<int> NpcIDs;
             public Func<bool> IsDowned;
-            public int MaxHP; // Cached HP
+            public Func<bool> IsAvailable; 
+            public int MaxHP; 
         }
 
         public override void PostAddRecipes()
@@ -39,13 +40,33 @@ namespace DamageMultiplier.PlayerFile
                         float prog = data.ContainsKey("progression") ? Convert.ToSingle(data["progression"]) : 0f;
                         List<int> npcIds = data.ContainsKey("npcIDs") ? (data["npcIDs"] as List<int>) : new List<int>();
                         Func<bool> downed = data.ContainsKey("downed") ? (data["downed"] as Func<bool>) : () => false;
-                        bool isBoss = data.ContainsKey("isBoss") ? Convert.ToBoolean(data["isBoss"]) : false;
+                        
+                        // FIX: Safely extract both availability AND hidden flags to strictly match the UI book
+                        Func<bool> available = () => true;
+                        if (data.ContainsKey("availability") && data["availability"] is Func<bool> avail1) available = avail1;
+                        else if (data.ContainsKey("available") && data["available"] is Func<bool> avail2) available = avail2;
 
-                        if (isBoss && npcIds != null && npcIds.Count > 0)
+                        Func<bool> hidden = () => false;
+                        if (data.ContainsKey("hidden") && data["hidden"] is Func<bool> hid) hidden = hid;
+
+                        bool isBoss = data.ContainsKey("isBoss") && Convert.ToBoolean(data["isBoss"]);
+                        bool isMiniBoss = data.ContainsKey("isMiniBoss") && Convert.ToBoolean(data["isMiniBoss"]);
+                        bool isEvent = data.ContainsKey("isEvent") && Convert.ToBoolean(data["isEvent"]);
+
+                        if (isBoss && !isMiniBoss && !isEvent && npcIds != null && npcIds.Count > 0)
                         {
-                            // Fetch HP ONCE during loading
-                            NPC tempNpc = new NPC();
-                            tempNpc.SetDefaults(npcIds.First());
+                            // FIX: Find the single tankiest part of the boss. 
+                            // This gives Slime God its true 10,000 HP without over-inflating it to 20k+.
+                            int maxHPOfParts = 0;
+                            foreach (int id in npcIds)
+                            {
+                                NPC tempNpc = new NPC();
+                                tempNpc.SetDefaults(id);
+                                if (tempNpc.lifeMax > maxHPOfParts)
+                                {
+                                    maxHPOfParts = tempNpc.lifeMax;
+                                }
+                            }
 
                             OrderedBosses.Add(new BossData
                             {
@@ -53,7 +74,8 @@ namespace DamageMultiplier.PlayerFile
                                 Progression = prog,
                                 NpcIDs = npcIds,
                                 IsDowned = downed,
-                                MaxHP = tempNpc.lifeMax
+                                IsAvailable = () => available() && !hidden(), // Hides Perforators in a Corruption world
+                                MaxHP = maxHPOfParts 
                             });
                         }
                     }
@@ -96,6 +118,7 @@ namespace DamageMultiplier.PlayerFile
                 Progression = prog,
                 NpcIDs = new List<int> { npcId },
                 IsDowned = downedFunc,
+                IsAvailable = () => true,
                 MaxHP = tempNpc.lifeMax
             });
         }

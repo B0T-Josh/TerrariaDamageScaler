@@ -3,74 +3,104 @@ using Terraria.ModLoader;
 using Terraria.DataStructures;
 using System.Linq;
 using System.Collections.Generic;
+using Terraria.ID;
 
 namespace DamageMultiplier.PlayerFile
 {
     public class WeaponLinkedProjectile : GlobalProjectile
     {
+        public int linkedItemType = 0;
         public string linkedWeaponName = null;
 
         public override bool InstancePerEntity => true;
 
         public override void OnSpawn(Projectile projectile, IEntitySource source)
         {
+            // Ignore enemy projectiles
             if (projectile.owner < 0 || projectile.owner >= Main.maxPlayers || projectile.hostile)
                 return;
 
-            if (projectile.minion || projectile.sentry || projectile.DamageType == DamageClass.Summon || projectile.DamageType.CountsAsClass(DamageClass.Summon))
+            var mainPlayer = Main.player[projectile.owner];
+            var visited = new HashSet<int>();
+
+            DetermineSource(source, visited);
+
+            if (linkedItemType == 0)
             {
-                var mainPlayer = Main.player[projectile.owner];
-                var visited = new HashSet<int>();
-
-                linkedWeaponName = GetWeaponNameFromSource(source, visited);
-
-                // NEW: Dynamic Mapping. If we successfully traced this projectile to a weapon, 
-                // cache it in the dictionary immediately so sub-projectiles (like minion lasers) can inherit it!
-                if (!string.IsNullOrEmpty(linkedWeaponName))
+                if (MyGlobalItem.ProjectileToItemTypeMap.TryGetValue(projectile.type, out int mappedType))
                 {
-                    MyGlobalItem.ProjectileToItemMap[projectile.type] = linkedWeaponName;
+                    linkedItemType = mappedType;
                 }
-                else
+                else if (mainPlayer.HeldItem != null && mainPlayer.HeldItem.damage > 0)
                 {
-                    if (MyGlobalItem.ProjectileToItemMap.TryGetValue(projectile.type, out string mappedName))
-                    {
-                        linkedWeaponName = mappedName;
-                    }
-                    else if (mainPlayer.HeldItem != null && mainPlayer.HeldItem.damage > 0)
-                    {
-                        // Final fallback: assume the item the player is actively holding spawned this.
-                        linkedWeaponName = DamageMultiplierScale.NormalizeName(mainPlayer.HeldItem.Name);
-                        MyGlobalItem.ProjectileToItemMap[projectile.type] = linkedWeaponName; 
-                    }
+                    linkedItemType = mainPlayer.HeldItem.type;
+                }
+            }
+
+            if (linkedItemType > 0)
+            {
+                linkedWeaponName = DamageMultiplierScale.NormalizeName(ContentSamples.ItemsByType[linkedItemType].Name);
+                MyGlobalItem.ProjectileToItemTypeMap[projectile.type] = linkedItemType;
+            }
+        }
+
+        private void DetermineSource(IEntitySource source, HashSet<int> visited)
+        {
+            if (source is EntitySource_ItemUse itemSource)
+                linkedItemType = itemSource.Item.type;
+            else if (source is EntitySource_ItemUse_WithAmmo ammoSource)
+                linkedItemType = ammoSource.Item.type;
+            else if (source is EntitySource_Buff buffSource)
+            {
+                if (MyGlobalItem.BuffToItemTypeMap.TryGetValue(buffSource.BuffId, out int buffItem))
+                    linkedItemType = buffItem;
+            }
+            else if (source is EntitySource_Parent parentSource && parentSource.Entity is Projectile parentProj)
+            {
+                if (visited.Add(parentProj.whoAmI))
+                {
+                    var parentGlobal = parentProj.GetGlobalProjectile<WeaponLinkedProjectile>();
+                    linkedItemType = parentGlobal.linkedItemType;
                 }
             }
         }
 
+        // Enforce damage BEFORE the projectile runs its logic
         public override bool PreAI(Projectile projectile)
         {
-            if (projectile.minion || projectile.sentry || projectile.DamageType == DamageClass.Summon || projectile.DamageType.CountsAsClass(DamageClass.Summon))
+            // CRITICAL FIX: Removed the Summoner restriction. Now intercepts ALL player projectiles.
+            if (projectile.owner >= 0 && projectile.owner < Main.maxPlayers && !projectile.hostile)
             {
-                if (projectile.owner >= 0 && projectile.owner < Main.maxPlayers)
-                {
-                    var mainPlayer = Main.player[projectile.owner];
-                    ApplyDamageOverride(mainPlayer, projectile);
-                }
+                var mainPlayer = Main.player[projectile.owner];
+                ApplyDamageOverride(mainPlayer, projectile);
             }
             
-            return true; // Return true to let vanilla/mod AI continue running
+            return true; 
+        }
+
+        // NEW: Enforce damage AFTER Calamity runs its custom AI to undo hardcoded multipliers
+        public override void PostAI(Projectile projectile)
+        {
+            if (projectile.owner >= 0 && projectile.owner < Main.maxPlayers && !projectile.hostile)
+            {
+                var mainPlayer = Main.player[projectile.owner];
+                ApplyDamageOverride(mainPlayer, projectile);
+            }
         }
 
         private void ApplyDamageOverride(Player player, Projectile projectile)
         {
-            if (string.IsNullOrEmpty(linkedWeaponName))
+            // Failsafe recovery during AI
+            if (linkedItemType == 0)
             {
-                if (MyGlobalItem.ProjectileToItemMap.TryGetValue(projectile.type, out string mappedName))
+                if (MyGlobalItem.ProjectileToItemTypeMap.TryGetValue(projectile.type, out int mappedType))
                 {
-                    linkedWeaponName = mappedName;
+                    linkedItemType = mappedType;
+                    linkedWeaponName = DamageMultiplierScale.NormalizeName(ContentSamples.ItemsByType[linkedItemType].Name);
                 }
             }
 
-            if (string.IsNullOrEmpty(linkedWeaponName))
+            if (linkedItemType == 0 || string.IsNullOrEmpty(linkedWeaponName))
                 return;
 
             var modPlayer = player.GetModPlayer<MyModPlayer>();
@@ -79,14 +109,12 @@ namespace DamageMultiplier.PlayerFile
             {
                 try
                 {
-                    // FIX: We calculate the absolute final damage (including player stat buffs)
-                    int totalScaledDamage = MyGlobalItem.CalculateTotalDamageByName(player, linkedWeaponName);
-                    int baseScaledDamage = MyGlobalItem.CalculateMinionBaseDamageByName(player, linkedWeaponName);
+                    // Calculate the exact damage requested by the UI
+                    int totalScaledDamage = MyGlobalItem.CalculateTotalDamageByType(player, linkedItemType);
+                    int baseScaledDamage = MyGlobalItem.CalculateMinionBaseDamageByType(player, linkedItemType);
                     
                     if (totalScaledDamage > 0)
                     {
-                        // By forcing projectile.damage directly, we guarantee the exact damage is dealt 
-                        // even if the mod ignores vanilla minion flags.
                         projectile.originalDamage = baseScaledDamage;
                         projectile.damage = totalScaledDamage;
                     }
@@ -96,45 +124,6 @@ namespace DamageMultiplier.PlayerFile
                     Mod.Logger.Warn($"Damage is not scaling: {ex.Message}");
                 }
             }
-        }
-
-        private string GetWeaponNameFromSource(IEntitySource source, HashSet<int> visited)
-        {
-            switch (source)
-            {
-                case EntitySource_ItemUse itemSource when itemSource.Item != null:
-                    return DamageMultiplierScale.NormalizeName(itemSource.Item.Name);
-
-                case EntitySource_Parent parentSource when parentSource.Entity is Projectile parentProj:
-                    if (!visited.Add(parentProj.whoAmI))
-                        return null;
-
-                    var parentGlobal = parentProj.GetGlobalProjectile<WeaponLinkedProjectile>();
-                    if (!string.IsNullOrEmpty(parentGlobal.linkedWeaponName))
-                        return parentGlobal.linkedWeaponName;
-
-                    return GetWeaponNameFromSource(parentProj.GetSource_FromThis(), visited);
-
-                case EntitySource_Misc miscSource:
-                    if (miscSource.Context == "Summon" || miscSource.Context == "MagicItem" || miscSource.Context == "PlayerAction" || miscSource.Context == "Minion")
-                    {
-                        if (Main.player.Any(p => p.active))
-                        {
-                            foreach (var p in Main.player)
-                            {
-                                if (!p.active)
-                                    continue;
-
-                                var held = p.HeldItem;
-                                if (held != null && held.damage > 0)
-                                    return DamageMultiplierScale.NormalizeName(held.Name);
-                            }
-                        }
-                    }
-                    break;
-            }
-
-            return null;
         }
     }
 }

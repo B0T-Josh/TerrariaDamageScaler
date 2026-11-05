@@ -12,10 +12,8 @@ namespace DamageMultiplier.PlayerFile
         private int lastSeenPrefix = -1;
 
         public static Dictionary<string, int> ItemNameToIdMap = new Dictionary<string, int>();
-        // Reverse lookup to track buff-spawned minions back to their original weapon
-        public static Dictionary<int, string> ProjectileToItemMap = new Dictionary<int, string>();
-
-        // Notice that public override void Load() has been deleted from here.
+        public static Dictionary<int, int> ProjectileToItemTypeMap = new Dictionary<int, int>();
+        public static Dictionary<int, int> BuffToItemTypeMap = new Dictionary<int, int>();
 
         public override void UpdateInventory(Item item, Player player)
         {
@@ -27,7 +25,7 @@ namespace DamageMultiplier.PlayerFile
             if (item.IsAir) return;
 
             var modPlayer = player.GetModPlayer<MyModPlayer>();
-            string normalizedName = DamageMultiplierScale.NormalizeName(item.Name);
+            string normalizedName = DamageMultiplierScale.NormalizeName(ContentSamples.ItemsByType[item.type].Name);
 
             if (!modPlayer.WeaponConfigs.TryGetValue(normalizedName, out WeaponScaleData config) || !config.IsEnabled)
                 return;
@@ -42,27 +40,22 @@ namespace DamageMultiplier.PlayerFile
         private static float GetPrefixDamageMultiplier(Item item)
         {
             if (item.prefix <= 0) return 1f;
-
             Item baseline = new Item();
             baseline.SetDefaults(item.type);
-
             if (baseline.damage <= 0) return 1f;
-
             return item.damage / (float)baseline.damage;
         }
 
         private static float GetReforgeMultiplier(Player player, string normalizedWeaponName)
         {
             var modPlayer = player.GetModPlayer<MyModPlayer>();
-            return modPlayer.reforgeMultipliers.TryGetValue(normalizedWeaponName, out float multiplier)
-                ? multiplier
-                : 1f;
+            return modPlayer.reforgeMultipliers.TryGetValue(normalizedWeaponName, out float multiplier) ? multiplier : 1f;
         }
 
         public override void ModifyWeaponDamage(Item item, Player player, ref StatModifier damage)
         {
             var modPlayer = player.GetModPlayer<MyModPlayer>();
-            string normalizedName = DamageMultiplierScale.NormalizeName(item.Name);
+            string normalizedName = DamageMultiplierScale.NormalizeName(ContentSamples.ItemsByType[item.type].Name);
 
             if (modPlayer.WeaponConfigs.TryGetValue(normalizedName, out WeaponScaleData config) && config.IsEnabled)
             {
@@ -74,30 +67,45 @@ namespace DamageMultiplier.PlayerFile
         public static float GetProgressionBaseDamage(Player player, Item weapon)
         {
             var modPlayer = player.GetModPlayer<MyModPlayer>();
-            string normalizedName = DamageMultiplierScale.NormalizeName(weapon.Name);
+            string normalizedName = DamageMultiplierScale.NormalizeName(ContentSamples.ItemsByType[weapon.type].Name);
 
             if (modPlayer.WeaponConfigs.TryGetValue(normalizedName, out WeaponScaleData config))
             {
-                if (!config.IsEnabled) 
-                {
-                    return weapon.damage; 
-                }
+                if (!config.IsEnabled) return weapon.damage; 
 
-                float highestHP = 0;
+                float highestProgression = -1f;
                 foreach (var boss in BossDefeated.OrderedBosses)
                 {
-                    if (boss.IsDowned.Invoke() && boss.MaxHP > highestHP)
+                    if (boss.IsDowned.Invoke() && boss.Progression > highestProgression)
                     {
-                        highestHP = boss.MaxHP;
+                        highestProgression = boss.Progression;
                     }
                 }
 
-                if (highestHP == 0 && BossDefeated.OrderedBosses.Count > 0)
+                float targetHP = 0;
+                
+                foreach (var boss in BossDefeated.OrderedBosses)
                 {
-                    highestHP = BossDefeated.OrderedBosses[0].MaxHP;
+                    if (boss.IsAvailable.Invoke() && !boss.IsDowned.Invoke() && boss.Progression > highestProgression)
+                    {
+                        targetHP = boss.MaxHP;
+                        break; 
+                    }
+                }
+
+                if (targetHP == 0 && BossDefeated.OrderedBosses.Count > 0)
+                {
+                    for (int i = BossDefeated.OrderedBosses.Count - 1; i >= 0; i--)
+                    {
+                        if (BossDefeated.OrderedBosses[i].IsAvailable.Invoke())
+                        {
+                            targetHP = BossDefeated.OrderedBosses[i].MaxHP;
+                            break;
+                        }
+                    }
                 }
                 
-                float damage = (highestHP * 0.001f) * config.DamageScale;
+                float damage = (targetHP * 0.0001f) * config.DamageScale;
 
                 if (weapon.DamageType == DamageClass.Magic && weapon.mana > 28)
                 {
@@ -118,14 +126,11 @@ namespace DamageMultiplier.PlayerFile
             return (int)Math.Round(modifier.ApplyTo(baseDamage));
         }
 
-        public static int CalculateTotalDamageByName(Player player, string itemName)
+        public static int CalculateTotalDamageByType(Player player, int itemType)
         {
-            if (!ItemNameToIdMap.TryGetValue(itemName, out int itemId))
-                return 1;
-
-            Item weapon = ContentSamples.ItemsByType[itemId];
-            if (weapon == null || weapon.IsAir) 
-                return 1;
+            if (itemType <= 0) return 1;
+            Item weapon = ContentSamples.ItemsByType[itemType];
+            if (weapon == null || weapon.IsAir) return 1;
 
             float baseDamage = GetProgressionBaseDamage(player, weapon);
             StatModifier modifier = player.GetTotalDamage(weapon.DamageType);
@@ -133,17 +138,38 @@ namespace DamageMultiplier.PlayerFile
             return (int)Math.Round(modifier.ApplyTo(baseDamage));
         }
 
-        public static int CalculateMinionBaseDamageByName(Player player, string itemName)
+        public static int CalculateMinionBaseDamageByType(Player player, int itemType)
         {
-            if (!ItemNameToIdMap.TryGetValue(itemName, out int itemId))
-                return 1;
-
-            Item weapon = ContentSamples.ItemsByType[itemId];
-            if (weapon == null || weapon.IsAir) 
-                return 1;
+            if (itemType <= 0) return 1;
+            Item weapon = ContentSamples.ItemsByType[itemType];
+            if (weapon == null || weapon.IsAir) return 1;
 
             float baseDamage = GetProgressionBaseDamage(player, weapon);
             return (int)Math.Round(baseDamage);
+        }
+        
+        public static string GetCurrentHPReferenceBoss()
+        {
+            if (BossDefeated.OrderedBosses.Count == 0) return "None";
+
+            float highestProgression = -1f;
+            foreach (var boss in BossDefeated.OrderedBosses)
+            {
+                if (boss.IsDowned.Invoke() && boss.Progression > highestProgression)
+                {
+                    highestProgression = boss.Progression;
+                }
+            }
+
+            foreach (var boss in BossDefeated.OrderedBosses)
+            {
+                if (boss.IsAvailable.Invoke() && !boss.IsDowned.Invoke() && boss.Progression > highestProgression)
+                {
+                    return boss.InternalName;
+                }
+            }
+            
+            return "All Defeated (Max Capped)";
         }
     }
 }

@@ -6,27 +6,28 @@ namespace DamageMultiplier.PlayerFile
 {
     public class RightClickUIIntercept : ModSystem
     {
-        // NEW: This guarantees dictionaries are built AFTER Calamity items are loaded
         public override void PostSetupContent()
         {
             MyGlobalItem.ItemNameToIdMap.Clear();
-            MyGlobalItem.ProjectileToItemMap.Clear();
+            MyGlobalItem.ProjectileToItemTypeMap.Clear();
+            MyGlobalItem.BuffToItemTypeMap.Clear(); // NEW: Tracks Buffs to Weapons
 
             foreach (var pair in ContentSamples.ItemsByType)
             {
-                if (!pair.Value.IsAir && !string.IsNullOrEmpty(pair.Value.Name))
+                Item item = pair.Value;
+                if (!item.IsAir)
                 {
-                    string norm = DamageMultiplierScale.NormalizeName(pair.Value.Name);
+                    string norm = DamageMultiplierScale.NormalizeName(item.Name);
                     
                     if (!MyGlobalItem.ItemNameToIdMap.ContainsKey(norm))
-                    {
                         MyGlobalItem.ItemNameToIdMap[norm] = pair.Key;
-                    }
                     
-                    if (pair.Value.shoot > 0 && !MyGlobalItem.ProjectileToItemMap.ContainsKey(pair.Value.shoot))
-                    {
-                        MyGlobalItem.ProjectileToItemMap[pair.Value.shoot] = norm;
-                    }
+                    if (item.shoot > 0 && !MyGlobalItem.ProjectileToItemTypeMap.ContainsKey(item.shoot))
+                        MyGlobalItem.ProjectileToItemTypeMap[item.shoot] = pair.Key;
+
+                    // Cache which weapon gives which buff (Crucial for Calamity minions)
+                    if (item.buffType > 0 && !MyGlobalItem.BuffToItemTypeMap.ContainsKey(item.buffType))
+                        MyGlobalItem.BuffToItemTypeMap[item.buffType] = pair.Key;
                 }
             }
         }
@@ -37,10 +38,8 @@ namespace DamageMultiplier.PlayerFile
 
             if (Main.mouseRight && Main.mouseRightRelease && !Main.HoverItem.IsAir && Main.HoverItem.damage > 0)
             {
-                string normName = DamageMultiplierScale.NormalizeName(Main.HoverItem.Name);
-                
+                string normName = DamageMultiplierScale.NormalizeName(ContentSamples.ItemsByType[Main.HoverItem.type].Name);
                 IndividualWeaponUISystem.OpenUIForWeapon(normName);
-                
                 Main.mouseRightRelease = false; 
             }
         }

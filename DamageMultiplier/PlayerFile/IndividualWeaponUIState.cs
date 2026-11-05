@@ -17,6 +17,8 @@ namespace DamageMultiplier.PlayerFile
         private UITextPanel<string> plusButton;
         private UITextPanel<string> closeButton;
 
+        private UIText bossReferenceText;
+
         private string currentWeapon;
         private MyModPlayer modPlayer;
 
@@ -26,7 +28,7 @@ namespace DamageMultiplier.PlayerFile
             mainPanel.Left.Set(-150, 0.5f);
             mainPanel.Top.Set(-100, 0.5f);
             mainPanel.Width.Set(300, 0f);
-            mainPanel.Height.Set(200, 0f);
+            mainPanel.Height.Set(240, 0f);
             mainPanel.BackgroundColor = new Color(33, 43, 79) * 0.8f;
             Append(mainPanel);
 
@@ -64,13 +66,28 @@ namespace DamageMultiplier.PlayerFile
             plusButton.OnLeftClick += IncreaseScale;
             mainPanel.Append(plusButton);
 
+            bossReferenceText = new UIText("HP Scale Boss: Unknown", 0.8f);
+            bossReferenceText.Top.Set(145, 0f);
+            bossReferenceText.HAlign = 0.5f;
+            mainPanel.Append(bossReferenceText);
+
             closeButton = new UITextPanel<string>("Close");
-            closeButton.Top.Set(150, 0f);
+            closeButton.Top.Set(175, 0f); 
             closeButton.Width.Set(100, 0f);
             closeButton.Height.Set(30, 0f);
             closeButton.HAlign = 0.5f;
             closeButton.OnLeftClick += (evt, element) => IndividualWeaponUISystem.CloseUI();
             mainPanel.Append(closeButton);
+        }
+
+        // NEW: This intercepts the mouse so you don't swing your weapon while clicking the UI
+        public override void Update(GameTime gameTime)
+        {
+            base.Update(gameTime);
+            if (mainPanel.IsMouseHovering)
+            {
+                Main.LocalPlayer.mouseInterface = true;
+            }
         }
 
         public void SetWeapon(string weaponName)
@@ -103,6 +120,7 @@ namespace DamageMultiplier.PlayerFile
             }
 
             scaleDisplay.SetText($"Scale: {config.DamageScale}");
+            bossReferenceText.SetText($"HP Scale Boss: {MyGlobalItem.GetCurrentHPReferenceBoss()}");
         }
 
         private void ToggleScaling(UIMouseEvent evt, UIElement listeningElement)
