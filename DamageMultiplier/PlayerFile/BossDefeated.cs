@@ -11,6 +11,11 @@ namespace DamageMultiplier.PlayerFile
     {
         public static List<BossData> OrderedBosses = new List<BossData>();
 
+        // NEW: Cached values updated dynamically while inside the world
+        public static int CurrentTargetHP = 0;
+        public static string CurrentTargetName = "None";
+        private int updateTimer = 0;
+
         public struct BossData
         {
             public string InternalName;
@@ -18,7 +23,6 @@ namespace DamageMultiplier.PlayerFile
             public List<int> NpcIDs;
             public Func<bool> IsDowned;
             public Func<bool> IsAvailable; 
-            public int MaxHP; 
         }
 
         public override void PostAddRecipes()
@@ -41,7 +45,6 @@ namespace DamageMultiplier.PlayerFile
                         List<int> npcIds = data.ContainsKey("npcIDs") ? (data["npcIDs"] as List<int>) : new List<int>();
                         Func<bool> downed = data.ContainsKey("downed") ? (data["downed"] as Func<bool>) : () => false;
                         
-                        // FIX: Safely extract both availability AND hidden flags to strictly match the UI book
                         Func<bool> available = () => true;
                         if (data.ContainsKey("availability") && data["availability"] is Func<bool> avail1) available = avail1;
                         else if (data.ContainsKey("available") && data["available"] is Func<bool> avail2) available = avail2;
@@ -55,27 +58,13 @@ namespace DamageMultiplier.PlayerFile
 
                         if (isBoss && !isMiniBoss && !isEvent && npcIds != null && npcIds.Count > 0)
                         {
-                            // FIX: Find the single tankiest part of the boss. 
-                            // This gives Slime God its true 10,000 HP without over-inflating it to 20k+.
-                            int maxHPOfParts = 0;
-                            foreach (int id in npcIds)
-                            {
-                                NPC tempNpc = new NPC();
-                                tempNpc.SetDefaults(id);
-                                if (tempNpc.lifeMax > maxHPOfParts)
-                                {
-                                    maxHPOfParts = tempNpc.lifeMax;
-                                }
-                            }
-
                             OrderedBosses.Add(new BossData
                             {
                                 InternalName = entry.Key,
                                 Progression = prog,
                                 NpcIDs = npcIds,
                                 IsDowned = downed,
-                                IsAvailable = () => available() && !hidden(), // Hides Perforators in a Corruption world
-                                MaxHP = maxHPOfParts 
+                                IsAvailable = () => available() && !hidden()
                             });
                         }
                     }
@@ -109,18 +98,99 @@ namespace DamageMultiplier.PlayerFile
 
         private void AddVanillaBoss(string name, float prog, int npcId, Func<bool> downedFunc)
         {
-            NPC tempNpc = new NPC();
-            tempNpc.SetDefaults(npcId);
-
             OrderedBosses.Add(new BossData
             {
                 InternalName = name,
                 Progression = prog,
                 NpcIDs = new List<int> { npcId },
                 IsDowned = downedFunc,
-                IsAvailable = () => true,
-                MaxHP = tempNpc.lifeMax
+                IsAvailable = () => true
             });
+        }
+
+        public override void OnWorldLoad()
+        {
+            CurrentTargetHP = 0;
+            CurrentTargetName = "None";
+            updateTimer = 60; // Force immediate calculation on world entry
+        }
+
+        // NEW: Background loop that calculates HP while inside the world
+        public override void PostUpdateWorld()
+        {
+            updateTimer++;
+            // Update once per second (60 ticks) so it doesn't cause frame lag
+            if (updateTimer >= 60)
+            {
+                updateTimer = 0;
+                UpdateProgressionTarget();
+            }
+        }
+
+        public static void UpdateProgressionTarget()
+        {
+            if (OrderedBosses.Count == 0) return;
+
+            float highestProgression = -1f;
+            foreach (var boss in OrderedBosses)
+            {
+                if (boss.IsDowned.Invoke() && boss.Progression > highestProgression)
+                {
+                    highestProgression = boss.Progression;
+                }
+            }
+
+            BossData targetBoss = default;
+            bool found = false;
+            
+            foreach (var boss in OrderedBosses)
+            {
+                if (boss.IsAvailable.Invoke() && !boss.IsDowned.Invoke() && boss.Progression > highestProgression)
+                {
+                    targetBoss = boss;
+                    found = true;
+                    break; 
+                }
+            }
+
+            if (!found)
+            {
+                for (int i = OrderedBosses.Count - 1; i >= 0; i--)
+                {
+                    if (OrderedBosses[i].IsAvailable.Invoke())
+                    {
+                        targetBoss = OrderedBosses[i];
+                        found = true;
+                        break;
+                    }
+                }
+            }
+
+            if (found)
+            {
+                CurrentTargetName = targetBoss.InternalName;
+                CurrentTargetHP = CalculateDynamicHP(targetBoss.NpcIDs);
+            }
+        }
+
+        private static int CalculateDynamicHP(List<int> npcIDs)
+        {
+            int maxHP = 0;
+            
+            // FIX: Pass the active GameModeData to the dummy NPC so Calamity can apply Revengeance multipliers
+            NPCSpawnParams spawnParams = new NPCSpawnParams();
+            spawnParams.gameModeData = Main.GameModeInfo;
+
+            foreach (int id in npcIDs)
+            {
+                NPC tempNpc = new NPC();
+                tempNpc.SetDefaults(id, spawnParams);
+                if (tempNpc.lifeMax > maxHP)
+                {
+                    maxHP = tempNpc.lifeMax;
+                }
+            }
+            return maxHP;
         }
     }
 }

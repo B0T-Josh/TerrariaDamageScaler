@@ -73,37 +73,8 @@ namespace DamageMultiplier.PlayerFile
             {
                 if (!config.IsEnabled) return weapon.damage; 
 
-                float highestProgression = -1f;
-                foreach (var boss in BossDefeated.OrderedBosses)
-                {
-                    if (boss.IsDowned.Invoke() && boss.Progression > highestProgression)
-                    {
-                        highestProgression = boss.Progression;
-                    }
-                }
-
-                float targetHP = 0;
-                
-                foreach (var boss in BossDefeated.OrderedBosses)
-                {
-                    if (boss.IsAvailable.Invoke() && !boss.IsDowned.Invoke() && boss.Progression > highestProgression)
-                    {
-                        targetHP = boss.MaxHP;
-                        break; 
-                    }
-                }
-
-                if (targetHP == 0 && BossDefeated.OrderedBosses.Count > 0)
-                {
-                    for (int i = BossDefeated.OrderedBosses.Count - 1; i >= 0; i--)
-                    {
-                        if (BossDefeated.OrderedBosses[i].IsAvailable.Invoke())
-                        {
-                            targetHP = BossDefeated.OrderedBosses[i].MaxHP;
-                            break;
-                        }
-                    }
-                }
+                // FIX: Grab the dynamically scaled HP straight from the tracker
+                float targetHP = BossDefeated.CurrentTargetHP;
                 
                 float damage = (targetHP * 0.0001f) * config.DamageScale;
 
@@ -150,26 +121,8 @@ namespace DamageMultiplier.PlayerFile
         
         public static string GetCurrentHPReferenceBoss()
         {
-            if (BossDefeated.OrderedBosses.Count == 0) return "None";
-
-            float highestProgression = -1f;
-            foreach (var boss in BossDefeated.OrderedBosses)
-            {
-                if (boss.IsDowned.Invoke() && boss.Progression > highestProgression)
-                {
-                    highestProgression = boss.Progression;
-                }
-            }
-
-            foreach (var boss in BossDefeated.OrderedBosses)
-            {
-                if (boss.IsAvailable.Invoke() && !boss.IsDowned.Invoke() && boss.Progression > highestProgression)
-                {
-                    return boss.InternalName;
-                }
-            }
-            
-            return "All Defeated (Max Capped)";
+            // FIX: Grab the string straight from the tracker
+            return BossDefeated.CurrentTargetName;
         }
     }
 }

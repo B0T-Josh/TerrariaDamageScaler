@@ -2,8 +2,7 @@ This mod is for automatic damage scaling with a sync of progression of the boss 
 This mod supports only Calamity mod.
 
 
-To use this mod, use this keywords:
+To use this mod, right click on the weapon that you want to select, 
+and then enable the damage scaling toggle button and set the damage scale.
 
-/weapon list (To list all weapons that have been stored)
-/weapon <weapon name> (To add weapon to the list, that you want to scale)
-/weapon remove <weapon name> (To remove the weapon from the list)
+The formula for the damage scaling is (Boss Max HP * 0.0001) * damage scale

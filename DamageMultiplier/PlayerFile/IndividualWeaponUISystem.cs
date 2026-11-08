@@ -1,6 +1,7 @@
 using Microsoft.Xna.Framework;
 using System.Collections.Generic;
 using Terraria;
+using Terraria.ID;
 using Terraria.ModLoader;
 using Terraria.UI;
 
@@ -52,6 +53,15 @@ namespace DamageMultiplier.PlayerFile
                     "DamageMultiplier: Individual Weapon Scaler UI",
                     delegate
                     {
+                        // FIX: Check for the right-click during the Draw phase.
+                        // This guarantees Main.HoverItem is populated regardless of PC hardware speed.
+                        if (Main.mouseRight && Main.mouseRightRelease && !Main.HoverItem.IsAir && Main.HoverItem.damage > 0)
+                        {
+                            string normName = DamageMultiplierScale.NormalizeName(ContentSamples.ItemsByType[Main.HoverItem.type].Name);
+                            OpenUIForWeapon(normName);
+                            Main.mouseRightRelease = false; 
+                        }
+
                         if (Visible && weaponUIInterface != null)
                         {
                             weaponUIInterface.Draw(Main.spriteBatch, new GameTime());
